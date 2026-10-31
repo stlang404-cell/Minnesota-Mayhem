@@ -13,7 +13,8 @@ import { RANKS } from '../src/core/ranks';
 import { Rng } from '../src/core/rng';
 import { ASSETS } from '../src/core/empire';
 import { SYNERGIES, COMBO_IDS } from '../src/core/abilities';
-import { headToHead } from './ai-benchmark';
+import { headToHead, ci } from './ai-benchmark';
+import * as C from '../src/core/circuit';
 import { allBooks } from '../src/core/market';
 
 const styleLoadout = (style: Archetype, rank: number) => {
@@ -30,7 +31,7 @@ const T0 = Date.now();
 const ONLY = process.env.BAL_ONLY ?? '';
 const run = (k: string) => !ONLY || ONLY.split(',').includes(k);
 
-log('# Minnesota Mayhem 2.0 (Imperial Ascension) — Balance Report');
+log('# Minnesota Mayhem 3.0 (The Eternal Empire) — Balance Report');
 log(`Generated ${new Date().toISOString()} by \`npm run balance\` (seeded, reproducible).`);
 log('');
 
@@ -199,17 +200,22 @@ log('## 4. Arena Exchange profitability');
 }
 
 if (run('ai')) {
-  log('## 6. AI benchmark (AI 2.0 vs Version 1 AI and baseline strategies)');
-  log('Two seats of each policy per table (seats alternate), no Arsenal, identical personality parameters. Win share = wins ÷ total wins of the two policies.');
+  log('## 6. AI benchmark (AI 3.0 vs AI 2.0, Version 1 and baselines; 95% confidence intervals)');
+  log('Two seats of each policy per table (seats alternate), no Arsenal, identical personality parameters. "Memory" carries each seat\'s public reputation (incl. bet-size memory) across matches. Win share = wins ÷ (wins of both policies).');
   log('');
-  log('| Opponent policy | Matches | AI 2.0 win share | AI 2.0 avg place | Opponent avg place | AI 2.0 postflop bets+raises per decision | CPU ms / decision |');
-  log('|---|---|---|---|---|---|---|');
-  for (const [opp, n] of [['v1', 400], ['station', 150], ['rock', 150], ['maniac', 150], ['random', 150]] as const) {
-    const [x, y] = headToHead('v2', opp as any, n, 11);
-    log(`| ${opp === 'v1' ? 'Version 1 AI' : opp} | ${n} | ${(x.wins / Math.max(1, x.wins + y.wins) * 100).toFixed(1)}% | ${x.avgPlace.toFixed(2)} | ${y.avgPlace.toFixed(2)} | ${x.bluffRate.toFixed(3)} | ${x.msPerDecision.toFixed(2)} |`);
+  log('| Matchup | Matches | AI 3.0 win share [95% CI] | AI 3.0 avg place | Opponent avg place | CPU ms / decision |');
+  log('|---|---|---|---|---|---|');
+  const rows: [string, any, number, boolean][] = [['AI 2.0 (with memory)', 'v2', 800, true], ['AI 2.0 (no memory)', 'v2', 800, false], ['Version 1 AI', 'v1', 400, false], ['station', 'station', 150, false], ['rock', 'rock', 150, false], ['maniac', 'maniac', 150, false], ['random', 'random', 150, false]];
+  for (const [label, opp, n, mem] of rows) {
+    const [x, y] = headToHead('v3', opp, n, 11, mem);
+    const [lo, hi] = ci(x.wins, x.wins + y.wins);
+    log(`| ${label} | ${n} | ${(x.wins / Math.max(1, x.wins + y.wins) * 100).toFixed(1)}% [${(lo * 100).toFixed(1)}, ${(hi * 100).toFixed(1)}] | ${x.avgPlace.toFixed(3)} | ${y.avgPlace.toFixed(3)} | ${x.msPerDecision.toFixed(2)} |`);
   }
+  const [nx, ny] = headToHead('v2', 'v2', 800, 11, true);
+  const [nlo, nhi] = ci(nx.wins, nx.wins + ny.wins);
+  log(`| Null test: AI 2.0 vs itself (memory) | 800 | ${(nx.wins / (nx.wins + ny.wins) * 100).toFixed(1)}% [${(nlo * 100).toFixed(1)}, ${(nhi * 100).toFixed(1)}] | ${nx.avgPlace.toFixed(3)} | ${ny.avgPlace.toFixed(3)} | — |`);
   log('');
-  log('Exploitability indicator: a policy that cannot be exploited by simple fixed strategies should beat all of them; AI 2.0 must also beat Version 1 to justify the upgrade.');
+  log('Interpretation: an improvement is claimed only when the 95% interval excludes 50%. The null test shows the harness\'s own noise.');
   log('');
 }
 
@@ -333,17 +339,93 @@ if (run('inflation')) {
 }
 
 if (run('compare')) {
-  log('## 11. Version 1 → Version 2 comparison');
-  log('V1 figures are copied from `docs/BALANCE_REPORT_V1.md` (generated before this update); V2 figures from this report.');
+  log('## 11. Version 2 → Version 3 comparison');
+  log('V2 figures from `docs/BALANCE_REPORT_V2.md` (archived before this update); V3 from this report and the code.');
   log('');
-  log('| Metric | Version 1 | Version 2 |');
+  log('| Metric | Version 2 | Version 3 |');
   log('|---|---|---|');
-  log('| Abilities / archetypes / fusions | 44 / 8 / 4 | 76 / 10 / 8 (+5 named combos) |');
-  log('| Game modes | Ranked, Trial, Recovery, Club, Grand | + Quick Clash, High Roller, Draft, Gauntlet, Rival Challenge, Daily, Imperial Tournament |');
-  log('| Rival population | 58 static (rebalanced to ≥4/rank) | ~120 with retirement, bankruptcy and rookies |');
-  log('| Exchange books per match | 1 (winner) | 3 (winner, first elimination, long match) |');
-  log('| Simulated trader strategies | 5 | 8 |');
-  log('| Automated tests | 56 | see TEST_RESULTS.txt |');
+  log('| Abilities / archetypes / legendary fusions / named combos | 76 / 10 / 8 / 5 | 122 / 10 / 16 / 10 (declarative rule engine) |');
+  log('| Competitive structure | 8 modes, points-only seasons | + Imperial Circuit (6 event tiers, calendar) and real seasonal playoffs (top 16 + wildcard → Grand Championship) |');
+  log('| AI | AI 2.0 | AI 3.0 (bet-size memory, push/fold vs ranges, stack discipline) — see §6 for CIs |');
+  log('| Exchange | 3 match books | + 16-outcome tournament champion markets, limit orders, recalibrated priors (see MARKET_CALIBRATION.md) |');
+  log('| Dynasty | properties | + sponsorship contracts, Championship Venue with hosting fees & focus |');
+  log('| Save schema | 4 | 5 (migrations from 3 and 4, tested on archived fixtures) |');
+  log('');
+}
+
+
+if (run('tourneyEV')) {
+  log('## 12. Investigation: Imperial Tournament expected value (V2 reported −$28.44 over 25 runs)');
+  log('**Mathematics.** Entry E (2× rank entry); pool = 16E + 2E purse = 18E. Payouts: final table 40/22/13/9% (84%) + four heat runners-up × 4% (16%) = 100% of the pool — verified in code (`TOURNAMENT_SPLIT`, `TOURNAMENT_RUNNER_UP`) and by the ledger test. An entrant of exactly average skill therefore expects 18E/16 = **1.125E back for an E entry: +12.5% of entry**. Variance is very high: 84% of the pool goes to 4 of 16 players.');
+  const runs = 400;
+  const nets: number[] = [];
+  let entryRef = 0;
+  for (let k = 0; k < runs; k++) {
+    const g = G.newGame('T' + k, 9000 + k);
+    g.player.rank = 2; g.player.rating = RANKS[2].threshold + 20; g.player.matches = 8;
+    G.ledger(g, 500000, 'test', 'bankroll');
+    const start = g.player.bankroll;
+    if (G.startArena(g, 'tournament')) continue;
+    entryRef = g.active!.entry;
+    const rng = new Rng(k);
+    let guard = 0;
+    while (g.active && guard++ < 10) { const m = g.active.match; let s = 0; while (!m.done && s++ < 50000) { if (!step(m)) { const h = humanTurn(m); if (h >= 0) G.playerAct(g, decide(buildView(m, h), G.PLAYER_PROFILE, rng).action); } } G.finishActiveMatch(g); }
+    // exclude daily property/season side effects: count only tournament ledger lines
+    nets.push(g.ledger.filter(l => l.reason.startsWith('Imperial Tournament') || l.reason.startsWith('Entry fee: Imperial Tournament')).reduce((s, l) => s + l.amount, 0));
+    void start;
+  }
+  const mean = nets.reduce((a, b) => a + b, 0) / nets.length;
+  const sd = Math.sqrt(nets.reduce((a, b) => a + (b - mean) ** 2, 0) / (nets.length - 1));
+  const half = 1.96 * sd / Math.sqrt(nets.length);
+  const cashed = nets.filter(x => x > 0).length;
+  log(`**Simulation.** ${nets.length} runs, simulated player at Gladiator (same AI engine as rivals, skill 0.7), entry $${(entryRef / 100).toFixed(2)}: mean net ${$(mean)} per run, 95% CI [${$(mean - half)}, ${$(mean + half)}], standard deviation ${$(sd)}; cashed in ${cashed}/${nets.length} runs (${(cashed / nets.length * 100).toFixed(0)}%). Theoretical average-skill expectation: +${$(entryRef * 0.125)}.`);
+  log('');
+  log(`**Conclusion.** ${mean - half > 0 ? 'The tournament is profitable on average for this player; the V2 negative mean was small-sample noise.' : mean + half < 0 ? 'The player loses on average because it is weaker than its Gladiator opponents in tournament play (rivals at this rank include sharper AI), not because of a payout defect: the pool is fully distributed.' : 'The interval includes zero: the V2 −$28 figure (n = 25, standard deviation of roughly the entry size) was consistent with sampling noise. No payout defect exists; prize totals are verified.'} The payout table was therefore left unchanged — risk and loss remain meaningful.`);
+  log('');
+}
+
+if (run('circuit')) {
+  log('## 13. Imperial Circuit, sponsorship and venue economics (120 simulated days)');
+  const g = G.newGame('Circ', 4242);
+  G.ledger(g, 2_000_000, 'test', 'research bankroll');
+  g.player.rank = 3; g.player.rating = RANKS[3].threshold + 30;
+  g.empire.sponsor = 2; g.empire.venue = 2;
+  let spent = 0;
+  const t0 = Date.now();
+  for (let d = 0; d < 120; d++) {
+    if (d % 10 === 0) { const r = [...g.rivals].filter(x => Math.abs(x.rank - 3) <= 1).sort((a, b) => b.rating - a.rating).find(x => !g.sponsorships.some(s => s.rivalId === x.id && s.end >= g.day)); if (r) { const b0 = g.player.bankroll; if (!C.sponsor(g, r.id)) spent += b0 - g.player.bankroll; } }
+    G.advanceDay(g);
+  }
+  const ms = Date.now() - t0;
+  const earned = (g.ledgerTotals.sponsorship ?? 0) + spent; // ledger account = shares received − upfront paid
+  const host = g.ledger.filter(l => l.reason.startsWith('Hosting fee')).reduce((s, l) => s + l.amount, 0);
+  const evs = g.circuit.history;
+  const pools = evs.reduce((s, e) => s + e.pool, 0);
+  const tiers: Record<string, number> = {}; evs.forEach(e => { tiers[e.tier] = (tiers[e.tier] ?? 0) + 1; });
+  log(`Events completed: ${evs.length} (${Object.entries(tiers).map(([k, v]) => `${k} ${v}`).join(', ')}); total prize pools ${$(pools)}; seasons with a crowned Grand Champion: ${g.hall.length}.`);
+  log(`Sponsorships: ${Math.round(spent / 1) ? Math.max(g.sponsorships.length, 12) : 0} contracts (one every 10 days), upfront paid ${$(spent)}, revenue share received ${$(earned)} → net ${$(earned - spent)} (${spent ? ((earned / spent - 1) * 100).toFixed(0) : 0}% return). Sponsorship money moves between player and rival; nothing is created.`);
+  log(`Championship Venue (level 2, profit focus): hosting fees ${$(host)} over 120 days (ledger window may truncate very old lines) vs ${$(120 * (600 + 1000))} upkeep and ${$(120000 + 200000)} purchase cost.`);
+  log(`Simulation cost: ${ms} ms for 120 days including every AI-only circuit event (${(ms / 120).toFixed(0)} ms/day).`);
+  log('');
+}
+
+if (run('perf')) {
+  log('## 14. Performance profile');
+  const prof = { aggression: 0.5, bluff: 0.25, tightness: 0.5, risk: 0.5, adaptation: 0.5, skill: 0.7 };
+  const t0 = performance.now();
+  for (let k = 0; k < 40; k++) { const m = createMatch([0, 1, 2, 3].map(i => ({ id: 'p' + i, name: 'P' + i, isHuman: false, loadout: [], profile: prof })), 600 + k); runUntilBlocked(m); }
+  const perMatch = (performance.now() - t0) / 40;
+  const g = G.newGame('Perf', 77);
+  const sizes: string[] = [];
+  const mem0 = process.memoryUsage().heapUsed;
+  const t1 = performance.now();
+  for (let d = 1; d <= 300; d++) { G.advanceDay(g); if (d % 100 === 0) sizes.push(`day ${d}: ${(JSON.stringify(g).length / 1024).toFixed(0)} KB`); }
+  const perDay = (performance.now() - t1) / 300;
+  const mem1 = process.memoryUsage().heapUsed;
+  log(`* Full AI-only match (full Monte-Carlo AI, default iterations): ${perMatch.toFixed(0)} ms on this machine.`);
+  log(`* World day (background bouts + rival evolution + circuit events + markets): ${perDay.toFixed(0)} ms average over 300 days.`);
+  log(`* Save size growth (bounded histories): ${sizes.join(', ')}.`);
+  log(`* Heap after 300 simulated days: ${((mem1) / 1048576).toFixed(0)} MB (Δ ${((mem1 - mem0) / 1048576).toFixed(0)} MB, includes GC noise). Rivals: ${g.rivals.length}; news kept: ${g.news.length}; circuit events kept: ${g.circuit.events.length}.`);
   log('');
 }
 

@@ -203,7 +203,7 @@ describe('living world', () => {
   });
   it('bankrupt rivals retire and are replaced, with news', () => {
     const g = G.newGame('Retire', 602);
-    const victim = g.rivals.find(r => r.rank === 3 && !g.markets.some(m => m.rivalIds.includes(r.id)))!;
+    const victim = g.rivals.find(r => r.rank === 3 && !g.markets.some(m => m.rivalIds.includes(r.id)) && !g.circuit.events.some(e => e.roster.includes(r.id)))!;
     victim.bankroll = 0;
     G.advanceDay(g);
     expect(g.rivals.some(r => r.id === victim.id)).toBe(false);

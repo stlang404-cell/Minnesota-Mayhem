@@ -133,8 +133,8 @@ describe('Dynasty: sponsorships', () => {
     expect(C.sponsor(g, r.id)).toMatch(/Already/);
     const rb = r.bankroll, pb = g.player.bankroll;
     C.sponsorShare(g, r.id, 10000, 'test prize');
-    expect(g.player.bankroll - pb).toBe(2500);
-    expect(rb - r.bankroll).toBe(2500);
+    expect(g.player.bankroll - pb).toBe(3000);
+    expect(rb - r.bankroll).toBe(3000);
     // conflict of interest on markets featuring the sponsored rival
     const mk = g.markets[0];
     mk.rivalIds[0] = r.id;

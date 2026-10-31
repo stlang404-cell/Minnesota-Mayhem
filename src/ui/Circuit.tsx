@@ -137,7 +137,7 @@ export function DynastyPanel({ g, toast }: { g: GameState; toast: (t: string, k?
   const offers = [...g.rivals].filter(r => Math.abs(r.rank - g.player.rank) <= 1 && !active.some(s => s.rivalId === r.id)).sort((a, b) => b.rating - a.rating).slice(0, 6);
   return (
     <Panel title="Dynasty: Sponsorships & Venue" right={<span className="muted">Sponsored rivals play independently — you cannot control them, and you may not trade markets involving them.</span>}>
-      {!lv ? <p className="muted">Acquire a Sponsorship Office to sign contracts with rivals: pay upfront, receive 25% of their prize money for 10 days.</p> : (
+      {!lv ? <p className="muted">Acquire a Sponsorship Office to sign contracts with rivals: pay upfront, receive 30% of their prize money for 10 days.</p> : (
         <>
           <h4>Active contracts ({active.length}/{lv + 1})</h4>
           {active.length === 0 && <p className="muted">None.</p>}

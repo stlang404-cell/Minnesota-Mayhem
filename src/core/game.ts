@@ -629,6 +629,7 @@ export function advanceDay(g: GameState) {
       const w = place.indexOf(0);
       const entry = RANKS[rank].entry;
       recordRivalResult(g.rivals, four.map(r => r.id), place, prizeTable(entry), entry);
+      four.forEach((r, i) => sponsorShare(g, r.id, prizeTable(entry)[place[i]] ?? 0, 'background bout'));
       seasonPoints(g, four.map(r => r.id), place, 0.5);
       if (probs[w] < 0.17) news(g, 'upset', `Upset in the ${RANKS[rank].arena}: ${four[w].name} (${Math.round(probs[w] * 100)}% favourite odds) beats ${four.filter((_, i) => i !== w).map(r => r.name).join(', ')}.`, four.map(r => r.id));
     }

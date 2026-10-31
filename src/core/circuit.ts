@@ -433,7 +433,7 @@ export function sponsoredIn(g: GameState, ids: string[]): boolean {
 }
 export function sponsorOffer(g: GameState, r: Rival) {
   const formBoost = r.form.length ? 1 + (2 - r.form.reduce((a, b) => a + b, 0) / r.form.length) * 0.15 : 1;
-  return { upfront: Math.round(RANKS[r.rank].entry * 6 * formBoost), sharePct: 25, days: 10 };
+  return { upfront: Math.round(RANKS[r.rank].entry * 2 * formBoost), sharePct: 30, days: 10 };
 }
 export function sponsor(g: GameState, rivalId: string): string | null {
   const lv = g.empire.sponsor ?? 0;
