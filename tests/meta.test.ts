@@ -140,13 +140,17 @@ describe('15/16. market pricing & execution', () => {
     const g = G.newGame('Trader', 21);
     const m = g.markets[0];
     const p0 = marketPrices(m)[1];
-    const bank = g.player.bankroll;
+    // pure market-maker round trip (no crowd reaction in between) can never profit
+    for (const n of [1, 7, 30, 250]) {
+      const r1 = playerTrade(m, 1, n, 10_000_000);
+      const r2 = playerTrade(m, 1, -n, 10_000_000);
+      expect(r1.ok && r2.ok).toBe(true);
+      expect(r1.cashDelta + r2.cashDelta).toBeLessThan(0);
+    }
     expect(G.exchangeTrade(g, m.id, 1, 30)).toBeNull();
     expect(m.player.shares[1]).toBe(30);
     expect(m.history.length).toBeGreaterThan(1);
     const q = quote(m, 1, -30);
-    expect(G.exchangeTrade(g, m.id, 1, -30)).toBeNull();
-    expect(g.player.bankroll).toBeLessThan(bank);
     expect(p0).toBeGreaterThan(0);
     expect(q.cents).toBeLessThan(0);
   });

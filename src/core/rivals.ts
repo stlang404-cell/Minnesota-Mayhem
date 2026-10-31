@@ -33,6 +33,8 @@ const STYLE_PROFILE: Record<Archetype, Partial<AIProfile>> = {
   economy: { aggression: 0.45, bluff: 0.2, tightness: 0.6, risk: 0.4 },
   comeback: { aggression: 0.5, bluff: 0.3, tightness: 0.5, risk: 0.75 },
   information: { aggression: 0.5, bluff: 0.25, tightness: 0.55, adaptation: 0.9 },
+  tournament: { aggression: 0.55, bluff: 0.2, tightness: 0.6, risk: 0.45, adaptation: 0.6 },
+  tactical: { aggression: 0.6, bluff: 0.35, tightness: 0.5, risk: 0.5, adaptation: 0.7 },
 };
 
 const clamp = (x: number) => Math.max(0.02, Math.min(0.98, x));

@@ -9,7 +9,7 @@
  *   - reward:      bounded post-match Dollar modifiers
  *   - insight:     displays computed from PUBLIC information + your own cards
  */
-export type Archetype = 'bluff' | 'pressure' | 'discipline' | 'counterplay' | 'momentum' | 'economy' | 'comeback' | 'information';
+export type Archetype = 'bluff' | 'pressure' | 'discipline' | 'counterplay' | 'momentum' | 'economy' | 'comeback' | 'information' | 'tournament' | 'tactical';
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 export type Window = 'preflop' | 'postflop' | 'river' | 'any';
 
@@ -22,6 +22,8 @@ export const ARCHETYPES: { id: Archetype; name: string; color: string; motto: st
   { id: 'economy', name: 'Economy', color: '#4bbf6a', motto: 'Every denarius counts.' },
   { id: 'comeback', name: 'Comeback', color: '#c2185b', motto: 'Never truly beaten.' },
   { id: 'information', name: 'Information', color: '#2bb5b0', motto: 'Knowledge from what is seen.' },
+  { id: 'tournament', name: 'Tournament', color: '#e66fb2', motto: 'Outlast, then devour.' },
+  { id: 'tactical', name: 'Tactical', color: '#c7d0db', motto: 'Timing is the sharpest blade.' },
 ];
 
 export interface AbilityDef {
@@ -37,6 +39,7 @@ export interface AbilityDef {
   text: (v: number) => string;
   counter: string;
   fusion?: [string, string];
+  cooldown?: number;       // hands between activations (actives)
   price: number;           // Dollars (cents) to buy in the Forge
   unlockRank: number;      // rank index required to buy
 }
@@ -193,6 +196,108 @@ export const ABILITIES: AbilityDef[] = [
   { id: 'wrath_of_mars', name: 'Wrath of Mars', archetype: 'pressure', rarity: 'legendary', kind: 'passive', cost: 0, uses: 8,
     values: [0.75, 1, 1.25], text: v => `Win uncontested after a postflop bet, or at showdown after 2+ raises: each folder/loser pays ${BB(v)} tribute.`,
     counter: 'Ward and Veto; fold early.', fusion: ['caesars_gambit', 'siege_engine'], price: 20000, unlockRank: 4 },
+
+  // ================= IMPERIAL ASCENSION EXPANSION =================
+  // ---------------- TOURNAMENT ----------------
+  { id: 'bubble_lord', name: 'Bubble Lord', archetype: 'tournament', rarity: 'rare', kind: 'passive', cost: 0, uses: 4,
+    values: [0.25, 0.3, 0.4], text: v => `With 3 or fewer players left, whenever you begin a hand as chip leader the shortest stack pays ${BB(v)} tribute.`,
+    counter: 'Short stacks must double through the leader quickly.', price: 14000, unlockRank: 1 },
+  { id: 'survivors_purse', name: "Survivor's Purse", archetype: 'tournament', rarity: 'common', kind: 'passive', cost: 0, uses: 0,
+    values: [2, 3, 4], text: v => `+${v}% Dollar prize for every opponent eliminated while you survive (shared +20% reward cap).`,
+    counter: 'Eliminate them early.', price: 6000, unlockRank: 0 },
+  { id: 'ante_collector', name: 'Ante Collector', archetype: 'tournament', rarity: 'common', kind: 'passive', cost: 0, uses: 0,
+    values: [1, 1, 2], text: v => `Once antes are in play, every pot you win grants ${v} Resolve.`,
+    counter: 'Contest their late-game steals.', price: 5000, unlockRank: 0 },
+  { id: 'final_table_nerves', name: 'Final Table Nerves', archetype: 'tournament', rarity: 'rare', kind: 'active', cost: 2, window: 'preflop', uses: 2,
+    values: [2, 2, 3], text: v => `Arm preflop with 3 or fewer players left: your next ${v} blinds are 50% waived.`,
+    counter: 'Pressure them while the waiver lasts.', price: 12000, unlockRank: 1 },
+  { id: 'executioner', name: 'Executioner', archetype: 'tournament', rarity: 'epic', kind: 'passive', cost: 0, uses: 3,
+    values: [3, 4, 5], text: v => `When you eliminate a player, gain ${v} Resolve and +${v}% Dollar prize (shared cap).`,
+    counter: 'Avoid all-ins against the executioner.', price: 24000, unlockRank: 2 },
+  { id: 'endurance_pact', name: 'Endurance Pact', archetype: 'tournament', rarity: 'rare', kind: 'passive', cost: 0, uses: 3,
+    values: [12, 10, 8], text: v => `Every ${v} hands you survive, gain 1 Ward (max 3 per match).`,
+    counter: 'Win through pots, not tribute.', price: 12000, unlockRank: 1 },
+  // ---------------- TACTICAL ----------------
+  { id: 'tempo_strike', name: 'Tempo Strike', archetype: 'tactical', rarity: 'rare', kind: 'active', cost: 2, window: 'any', uses: 0, cooldown: 4,
+    values: [0.25, 0.35, 0.5], text: v => `Arm on your turn (4-hand cooldown). If you win this hand, every opponent who lost chips in it pays ${BB(v)} tribute.`,
+    counter: 'Fold early against an armed Tempo Strike.', price: 13000, unlockRank: 1 },
+  { id: 'blockade', name: 'Blockade', archetype: 'tactical', rarity: 'epic', kind: 'active', cost: 2, window: 'preflop', uses: 3, cooldown: 5,
+    values: [1.5, 1.5, 2], text: v => `Arm preflop (5-hand cooldown). Tributes you collect this hand are multiplied ×${v} (per-hand caps still apply).`,
+    counter: 'Wards and Vetoes ignore the multiplier.', price: 22000, unlockRank: 2 },
+  { id: 'feint_line', name: 'Feint Line', archetype: 'tactical', rarity: 'common', kind: 'passive', cost: 0, uses: 0,
+    values: [2, 2, 3], text: v => `Check-raise on a street and go on to win the hand: gain ${v} Resolve.`,
+    counter: 'Bet less often into a checker.', price: 5000, unlockRank: 0 },
+  { id: 'tactical_retreat', name: 'Tactical Retreat', archetype: 'tactical', rarity: 'common', kind: 'active', cost: 1, window: 'postflop', uses: 0, cooldown: 3,
+    values: [0.2, 0.25, 0.3], text: v => `Arm after the flop (3-hand cooldown). If you later fold this hand, the winner refunds ${Math.round(v * 100)}% of your contribution (max 1.5 BB).`,
+    counter: 'Make them fold before the flop.', price: 6000, unlockRank: 0 },
+  { id: 'overwatch', name: 'Overwatch', archetype: 'tactical', rarity: 'common', kind: 'passive', cost: 0, uses: 6,
+    values: [1, 1, 2], text: v => `Whenever an opponent arms an ability, gain ${v} Resolve.`,
+    counter: 'Rely on passives against them.', price: 5000, unlockRank: 0 },
+  { id: 'interdict', name: 'Interdict', archetype: 'tactical', rarity: 'epic', kind: 'active', cost: 3, window: 'any', uses: 2,
+    values: [2, 2, 3], text: v => `Arm on your turn: gain ${v} Wards for the rest of the match.`,
+    counter: 'Shift to restitution and pot equity.', price: 20000, unlockRank: 2 },
+  // ---------------- additions to the original eight ----------------
+  { id: 'senate_whisper', name: 'Senate Whisper', archetype: 'bluff', rarity: 'rare', kind: 'passive', cost: 0, uses: 0,
+    values: [2, 2, 3], text: v => `When two or more opponents fold to your bets after the flop in one hand, gain ${v} Resolve.`,
+    counter: 'Defend together — someone must call.', price: 12000, unlockRank: 1 },
+  { id: 'smoke_screen', name: 'Smoke Screen', archetype: 'bluff', rarity: 'common', kind: 'active', cost: 1, window: 'postflop', uses: 0, cooldown: 3,
+    values: [1, 1, 1], text: () => `Arm after the flop (3-hand cooldown). If you win this hand uncontested, your next blind is 50% waived.`,
+    counter: 'Call the smoke.', price: 5000, unlockRank: 0 },
+  { id: 'relentless', name: 'Relentless', archetype: 'pressure', rarity: 'rare', kind: 'passive', cost: 0, uses: 4,
+    values: [0.5, 0.6, 0.75], text: v => `Win 3 hands in a row in which you raised preflop: everyone who folded preflop in the third pays ${BB(v)} tribute.`,
+    counter: 'Re-raise to break the chain.', price: 13000, unlockRank: 1 },
+  { id: 'shield_bash', name: 'Shield Bash', archetype: 'pressure', rarity: 'common', kind: 'passive', cost: 0, uses: 0,
+    values: [1, 1, 2], text: v => `Re-raise preflop (3-bet) and win the hand: gain ${v} Resolve.`,
+    counter: 'Four-bet light occasionally.', price: 5000, unlockRank: 0 },
+  { id: 'patient_hunter', name: 'Patient Hunter', archetype: 'discipline', rarity: 'rare', kind: 'passive', cost: 0, uses: 3,
+    values: [0.5, 0.6, 0.75], text: v => `After 4+ straight preflop folds, if you win the next hand you play, every opponent who lost chips in it pays ${BB(v)} tribute.`,
+    counter: 'Respect the rock when it finally plays.', price: 12000, unlockRank: 1 },
+  { id: 'iron_ration', name: 'Iron Ration', archetype: 'discipline', rarity: 'common', kind: 'passive', cost: 0, uses: 0,
+    values: [3, 3, 2], text: v => `While below 12 BB, every ${v} blinds you post earn a 50% waiver on your next blind.`,
+    counter: 'Eliminate short stacks decisively.', price: 5000, unlockRank: 0 },
+  { id: 'call_the_bluff', name: 'Call the Bluff', archetype: 'counterplay', rarity: 'rare', kind: 'active', cost: 2, window: 'river', uses: 3,
+    values: [1, 1.25, 1.5], text: v => `Arm on the river while facing a bet. If you call and win at showdown, the river bettor pays ${BB(v)} tribute.`,
+    counter: 'Value-bet only; never bluff into an armed caller.', price: 13000, unlockRank: 1 },
+  { id: 'grudge', name: 'Grudge', archetype: 'counterplay', rarity: 'common', kind: 'passive', cost: 0, uses: 3,
+    values: [2, 2, 3], text: v => `When the same opponent beats you in two pots in a row, gain ${v} Resolve and 1 Ward.`,
+    counter: 'Spread your aggression around.', price: 5000, unlockRank: 0 },
+  { id: 'victory_lap', name: 'Victory Lap', archetype: 'momentum', rarity: 'rare', kind: 'passive', cost: 0, uses: 0,
+    values: [1, 1, 2], text: v => `After you win a showdown, your next active ability costs ${v} less Resolve.`,
+    counter: 'Win the showdowns yourself.', price: 11000, unlockRank: 1 },
+  { id: 'charge_of_equites', name: 'Charge of the Equites', archetype: 'momentum', rarity: 'epic', kind: 'active', cost: 2, window: 'preflop', uses: 0, cooldown: 3,
+    values: [0.25, 0.35, 0.5], text: v => `Arm preflop (3-hand cooldown). If you win the hand, every opponent who called preflop and lost pays ${BB(v)} tribute.`,
+    counter: 'Fold or re-raise preflop instead of flatting.', price: 22000, unlockRank: 2 },
+  { id: 'dividend', name: 'Dividend', archetype: 'economy', rarity: 'rare', kind: 'passive', cost: 0, uses: 0,
+    values: [1, 1, 2], text: v => `+${v}% Dollar prize for every 5 pots you win (shared +20% cap).`,
+    counter: 'Win the pots yourself.', price: 11000, unlockRank: 1 },
+  { id: 'bankroll_insurance', name: 'Bankroll Insurance', archetype: 'economy', rarity: 'common', kind: 'passive', cost: 0, uses: 0,
+    values: [30, 40, 50], text: v => `Finish 4th: ${v}% of your entry fee is refunded.`,
+    counter: 'None — it only softens the worst result.', price: 5000, unlockRank: 0 },
+  { id: 'desperate_gambit', name: 'Desperate Gambit', archetype: 'comeback', rarity: 'rare', kind: 'active', cost: 1, window: 'preflop', uses: 2,
+    values: [0.5, 0.6, 0.75], text: v => `Arm preflop below 6 BB. If you win the hand, every opponent who lost chips in it pays ${BB(v)} tribute.`,
+    counter: 'Only call with real hands.', price: 11000, unlockRank: 1 },
+  { id: 'ember_guard', name: 'Ember Guard', archetype: 'comeback', rarity: 'rare', kind: 'passive', cost: 0, uses: 3,
+    values: [1, 1, 2], text: v => `While you hold the shortest stack, up to ${v} tribute(s) per hand aimed at you are negated.`,
+    counter: 'Let someone else become shortest.', price: 11000, unlockRank: 1 },
+  { id: 'cartographer', name: 'Cartographer', archetype: 'information', rarity: 'rare', kind: 'passive', cost: 0, uses: 1,
+    values: [3, 4, 5], text: v => `After 20 hands of mapping the table, gain ${v} Resolve and 2 Wards.`,
+    counter: 'Finish them before hand 20.', price: 11000, unlockRank: 1 },
+  { id: 'tell_reader', name: 'Tell Reader', archetype: 'information', rarity: 'common', kind: 'active', cost: 1, window: 'any', uses: 0,
+    values: [1, 1, 1], text: () => `Reveal every live opponent's public tendencies this match (aggression, fold-to-raise, showdown bluffs).`,
+    counter: 'Mix up your play.', price: 4000, unlockRank: 0 },
+  // ---------------- NEW FUSIONS ----------------
+  { id: 'iron_executioner', name: 'Iron Executioner', archetype: 'tournament', rarity: 'legendary', kind: 'passive', cost: 0, uses: 6,
+    values: [4, 5, 6], text: v => `Eliminate a player: +${v} Resolve and +${v}% prize. With 3 or fewer left, starting a hand as leader taxes the shortest stack 0.4 BB.`,
+    counter: 'Never become the shortest stack.', fusion: ['executioner', 'bubble_lord'], price: 20000, unlockRank: 4 },
+  { id: 'eternal_flame', name: 'Eternal Flame', archetype: 'comeback', rarity: 'legendary', kind: 'passive', cost: 0, uses: 3,
+    values: [5, 6, 7], text: v => `Below 8 BB: +${v} Resolve (3×/match). While shortest, the first tribute each hand against you is negated.`,
+    counter: 'Eliminate, do not tax.', fusion: ['phoenix_ash', 'ember_guard'], price: 20000, unlockRank: 4 },
+  { id: 'phantom_tempo', name: 'Phantom Tempo', archetype: 'tactical', rarity: 'legendary', kind: 'passive', cost: 0, uses: 8,
+    values: [0.25, 0.3, 0.4], text: v => `Every uncontested win: opponents who put chips in pay ${BB(v)}. Every 3rd also waives your next blind.`,
+    counter: 'Make them show their cards.', fusion: ['tempo_strike', 'phantom_legion'], price: 20000, unlockRank: 4 },
+  { id: 'oracles_ledger', name: "Oracle's Ledger", archetype: 'economy', rarity: 'legendary', kind: 'passive', cost: 0, uses: 1,
+    values: [25, 30, 35], text: v => `After 20 hands: +3 Resolve and 2 Wards. Finish 3rd or 4th: ${v}% of entry refunded.`,
+    counter: 'End it early.', fusion: ['cartographer', 'merchants_ledger'], price: 15000, unlockRank: 4 },
 ];
 
 export const ABILITY_MAP: Record<string, AbilityDef> = Object.fromEntries(ABILITIES.map(a => [a.id, a]));
@@ -242,11 +347,21 @@ export const SYNERGIES: { id: string; name: string; needs: string[]; desc: strin
   { id: 'iron_tax', name: 'Iron Tax', needs: ['tax_collector', 'iron_grip'], desc: 'Tax Collector triggers also grant 1 Resolve.' },
   { id: 'drumline', name: 'Drumline', needs: ['war_drums', 'siege_engine'], desc: 'War Drums costs 0 Resolve.' },
   { id: 'stoic_order', name: 'Stoic Order', needs: ['stoic_patience', 'iron_discipline'], desc: 'Iron Discipline needs one fewer fold.' },
+  { id: 'night_watch', name: 'Night Watch', needs: ['overwatch', 'tell_reader'], desc: 'Tell Reader costs 0 Resolve.' },
+  { id: 'last_legion', name: 'Last Legion', needs: ['endurance_pact', 'ember_guard'], desc: 'Endurance Pact Wards also grant 1 Resolve.' },
+  // ---- Named three-piece combos (Imperial Ascension) ----
+  { id: 'imperial_conspiracy', name: 'Imperial Conspiracy', needs: ['caesars_gambit', 'senates_betrayal', 'mask_of_janus'], desc: "Caesar's Gambit and Senate's Betrayal tributes +0.25 BB; Mask of Janus costs 1 Resolve." },
+  { id: 'golden_legion', name: 'Golden Legion', needs: ['iron_discipline', 'golden_touch', 'legion_formation'], desc: 'Formation tribute starts at 2 Formation; +5% prize (shared cap).' },
+  { id: 'frozen_empire', name: 'Frozen Empire', needs: ['frozen_legion', 'vestal_vigil', 'fortress_wall'], desc: '+2 Wards at the start of the match; Frozen Legion gains +2 uses.' },
+  { id: 'senate_collapse', name: 'Senate Collapse', needs: ['thunder_of_jupiter', 'senate_whisper', 'caesars_gambit'], desc: 'Thunder of Jupiter costs 1 Resolve; Senate Whisper triggers when any single opponent folds to you after the flop.' },
+  { id: 'caesars_ascension', name: "Caesar's Ascension", needs: ['@two_legendaries'], desc: 'Equip any two legendary fusions: +1 starting Resolve and every tribute you collect gains +0.25 BB (caps still apply).' },
 ];
+export const COMBO_IDS = ['imperial_conspiracy', 'golden_legion', 'frozen_empire', 'senate_collapse', 'caesars_ascension'];
 
 export function activeSynergies(defIds: string[]): typeof SYNERGIES {
   const set = new Set(defIds);
-  return SYNERGIES.filter(s => s.needs.every(n => set.has(n)));
+  const legendaries = defIds.filter(id => ABILITY_MAP[id]?.rarity === 'legendary').length;
+  return SYNERGIES.filter(s => s.needs[0] === '@two_legendaries' ? legendaries >= 2 : s.needs.every(n => set.has(n)));
 }
 
 /** Archetype set bonuses: 3 of a kind -> +1 starting Resolve, 5 -> +2, plus +1 max Resolve. */

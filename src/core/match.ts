@@ -1,5 +1,5 @@
 import { ABILITY_MAP, activeSynergies, resolveAbility, ResolvedAbility, setBonuses, SigilId, AbilityDef } from './abilities';
-import { AIProfile, AIView, decide, emptyStats, PublicStats } from './ai';
+import { AIProfile, AIView, decide, decideV1, emptyStats, PublicStats } from './ai';
 import { equityMC } from './equity';
 import { categoryOf } from './handEval';
 import {
@@ -7,11 +7,17 @@ import {
   startHand, Street, TableConfig, TableState, transferChips, potTotal,
 } from './poker';
 import { mix, Rng } from './rng';
+import * as X2 from './arsenal2';
 
 export interface LoadoutEntry { defId: string; level: number; sigil?: SigilId }
 
 export interface MatchPlayer {
   id: string; name: string; isHuman: boolean; loadout: LoadoutEntry[]; profile: AIProfile;
+  /** public reputation from earlier matches (observable statistics only) */
+  reputation?: PublicStats;
+  /** how many past matches this player has shared with each opponent id (scales memory use) */
+  familiarity?: Record<string, number>;
+  aiVersion?: 1 | 2;
 }
 
 export interface SeatArsenal {
@@ -30,7 +36,9 @@ export interface SeatArsenal {
   rewardPct: number;
   rebatePct: number;
   triggers: number;
-  insight: { hand: number; equity?: number; oracle?: { seat: number; equity: number }[]; potOdds?: number } | null;
+  /** generic counters for expansion abilities (serializable) */
+  x?: Record<string, number>;
+  insight: { hand: number; equity?: number; oracle?: { seat: number; equity: number }[]; potOdds?: number; tells?: { seat: number; aggr: number; f2r: number; bluffs: number; hands: number }[] } | null;
 }
 
 export interface MatchEvent { n: number; hand: number; seat: number; kind: 'ability' | 'win' | 'bluff' | 'elim' | 'champion' | 'info' | 'arm'; text: string; abilityId?: string }
@@ -73,10 +81,10 @@ function freshTrack(n: number): HandTrack {
 export function abilitiesOf(m: MatchState, seat: number): ResolvedAbility[] {
   return m.players[seat].loadout.slice(0, 8).filter(e => ABILITY_MAP[e.defId]).map(resolveAbility);
 }
-function has(m: MatchState, seat: number, id: string): ResolvedAbility | undefined {
+export function has(m: MatchState, seat: number, id: string): ResolvedAbility | undefined {
   return abilitiesOf(m, seat).find(a => a.def.id === id);
 }
-function hasSyn(m: MatchState, seat: number, id: string): boolean {
+export function hasSyn(m: MatchState, seat: number, id: string): boolean {
   return activeSynergies(m.players[seat].loadout.map(l => l.defId)).some(s => s.id === id);
 }
 
@@ -105,28 +113,30 @@ export function createMatch(players: MatchPlayer[], seed: number, kind: MatchSta
     const gt = has(m, i, 'golden_touch'); if (gt) a.rewardPct += gt.value;
     const gc = has(m, i, 'gold_of_croesus'); if (gc) { a.rewardPct += gc.value; a.rebatePct = Math.max(a.rebatePct, 25); }
     const ml = has(m, i, 'merchants_ledger'); if (ml) a.rebatePct = Math.max(a.rebatePct, ml.value);
+    X2.matchStart(m, i);
   });
   return m;
 }
 
-function emit(m: MatchState, seat: number, kind: MatchEvent['kind'], text: string, abilityId?: string) {
+export function emit(m: MatchState, seat: number, kind: MatchEvent['kind'], text: string, abilityId?: string) {
   m.events.push({ n: ++m.eventCounter, hand: m.table.handNo, seat, kind, text, abilityId });
   if (m.events.length > 120) m.events.splice(0, m.events.length - 120);
 }
 
-function usesLeft(m: MatchState, seat: number, ab: ResolvedAbility): boolean {
+export function usesLeft(m: MatchState, seat: number, ab: ResolvedAbility): boolean {
   if (ab.uses <= 0) return true;
   let max = ab.uses;
   if (ab.def.id === 'last_stand' && hasSyn(m, seat, 'phoenix_rising')) max += 1;
+  max += X2.extraUses(m, seat, ab.def.id);
   return (m.arsenal[seat].used[ab.def.id] ?? 0) < max;
 }
-function consume(m: MatchState, seat: number, ab: ResolvedAbility) {
+export function consume(m: MatchState, seat: number, ab: ResolvedAbility) {
   const a = m.arsenal[seat];
   a.used[ab.def.id] = (a.used[ab.def.id] ?? 0) + 1;
   a.triggers++;
   if (ab.thriftBonus) gainResolve(m, seat, ab.thriftBonus);
 }
-function gainResolve(m: MatchState, seat: number, n: number) {
+export function gainResolve(m: MatchState, seat: number, n: number) {
   const a = m.arsenal[seat];
   a.resolve = Math.max(0, Math.min(MAX_RESOLVE, a.resolve + n));
 }
@@ -157,6 +167,8 @@ function resolveEffects(m: MatchState, effects: Effect[], bb: number, gains?: nu
     if (e.from === e.to || t.seats[e.from].out || t.seats[e.to].out && e.prio === 1) continue;
     const payer = m.arsenal[e.from];
     if (e.prio === 1) {
+      if (X2.tributeGuard(m, e)) continue;
+      e.bb = X2.tributeBonus(m, e);
       if (payer.armed.includes('veto')) {
         const v = has(m, e.from, 'veto');
         gainResolve(m, e.from, v?.value ?? 1);
@@ -222,6 +234,7 @@ export function beginHand(m: MatchState) {
     if (pf && nextHand % 4 === 0) { gainResolve(m, i, pf.value); emit(m, i, 'ability', `Patron's Favor: +${pf.value} Resolve`, 'patrons_favor'); }
     const sr = has(m, i, 'scroll_of_records');
     if (sr && nextHand === 11 && usesLeft(m, i, sr)) { consume(m, i, sr); gainResolve(m, i, sr.value); m.arsenal[i].wardsLeft++; emit(m, i, 'ability', `Scroll of Records complete: +${sr.value} Resolve`, 'scroll_of_records'); }
+    X2.handStart(m, i, nextHand, leader, effects);
     const tc = has(m, i, 'tax_collector');
     if (tc && nextHand > 1 && bbNext > prevLevel) {
       for (const j of live) if (j !== i) effects.push({ prio: 1, owner: i, from: j, to: i, bb: tc.value, source: 'tax_collector', label: 'Tax Collector' });
@@ -238,6 +251,7 @@ export function beginHand(m: MatchState) {
     emit(m, i, 'ability', `${t.seats[i].name}'s blind is 50% waived`, 'iron_discipline');
   }
   m.track = freshTrack(n);
+  X2.blindsPosted(m);
   m.track.chipLeader = leader;
   m.track.levelIndex = t.levelIndex;
   for (const i of live) m.stats[i].hands++;
@@ -258,6 +272,8 @@ export function armable(m: MatchState, seat: number): { ab: ResolvedAbility; cos
     if (eagle && recentWins >= 2) cost = Math.max(0, cost - eagle.value);
     if (sibyl && ab.def.archetype === 'information') cost = 0;
     if (ab.def.id === 'war_drums' && hasSyn(m, seat, 'drumline')) cost = 0;
+    const rule = X2.armRules(m, seat, ab);
+    if (rule.delta < 0) cost = Math.max(cost > 0 && ab.def.id !== 'tell_reader' ? 1 : 0, cost + rule.delta);
     let ok = true, reason = '';
     const w = ab.def.window;
     if (!t.handActive || t.toAct !== seat) { ok = false; reason = 'Only on your turn'; }
@@ -267,6 +283,7 @@ export function armable(m: MatchState, seat: number): { ab: ResolvedAbility; cos
     else if (w === 'river' && t.street !== 'river') { ok = false; reason = 'River only'; }
     else if (!usesLeft(m, seat, ab)) { ok = false; reason = 'No uses left'; }
     else if (a.resolve < cost) { ok = false; reason = `Needs ${cost} Resolve`; }
+    else if (rule.reason) { ok = false; reason = rule.reason; }
     else if (ab.def.id === 'gladiators_oath' && t.seats[seat].stack + t.seats[seat].committed > 15 * t.level.bb) { ok = false; reason = 'Only below 15 BB'; }
     out.push({ ab, cost, ok, reason });
   }
@@ -285,6 +302,7 @@ export function activate(m: MatchState, seat: number, defId: string): boolean {
   if (defId === 'sponsors_mark') { a.rewardPct += opt.ab.value; }
   if (defId === 'augurs_eye' || defId === 'oracle_of_delphi') computeInsight(m, seat, defId === 'oracle_of_delphi');
   emit(m, seat, 'arm', `${name} arms ${opt.ab.def.name}`, defId);
+  X2.onArm(m, seat, defId);
   return true;
 }
 
@@ -316,6 +334,7 @@ export function act(m: MatchState, seat: number, action: Action) {
   const facing = L.toCall > 0;
   const facingRaise = facing && (street !== 'preflop' || t.currentBet > t.level.bb);
   const isBlind = seat === t.sbSeat || seat === t.bbSeat;
+  const betBefore = t.currentBet, aggressorBefore = t.aggressor, preFolds = m.arsenal[seat].consecPreFolds, firstVol = !m.track.vpip[seat];
   applyAction(t, seat, action);
   const last = [...t.log].reverse().find(e => e.seat === seat && ['fold', 'check', 'call', 'bet', 'raise'].includes(e.kind));
   const kind = last?.kind ?? action.type;
@@ -351,6 +370,7 @@ export function act(m: MatchState, seat: number, action: Action) {
     else tr.betPost[seat] = true;
     if (street === 'river') tr.riverAgg[seat] = true;
   }
+  X2.onAct(m, seat, kind, street, { betBefore, aggressorBefore, facing, preFolds, firstVol });
   if (!t.handActive) endOfHand(m);
 }
 
@@ -453,7 +473,7 @@ function endOfHand(m: MatchState) {
       const maxF = hasSyn(m, o, 'rolling_thunder') ? 6 : 5;
       if (anyWin) {
         A.formation = Math.min(maxF, A.formation + 1);
-        if (A.formation >= 3) {
+        if (A.formation >= X2.formationThreshold(m, o)) {
           const contested = new Set([...sdLosers, ...postFolders(o)]);
           const losers = t.seats.map((_, i) => i).filter(i => i !== o && dealtIn[i] && net[i] < 0 && contested.has(i));
           if (losers.length) {
@@ -483,6 +503,8 @@ function endOfHand(m: MatchState) {
     }
     if ((x = ab('sibyls_insight')) && r.showdown) { gainResolve(m, o, x.value); fire(x); }
   }
+  const ctx: X2.EndCtx = { r, bb, net, won, sdLosers, bigWinner, postFolders, effects };
+  for (let o = 0; o < n; o++) if (dealtIn[o]) X2.handEnd(m, o, ctx);
   resolveEffects(m, effects, bb, net, r.contrib);
   // post-resolution: phoenix
   for (let o = 0; o < n; o++) {
@@ -497,6 +519,7 @@ function endOfHand(m: MatchState) {
   const busted = finalizeHand(t);
   for (const b of busted) {
     emit(m, b, 'elim', `${t.seats[b].name} is eliminated`);
+    X2.onElimination(m, b, bigWinner);
     const live = liveSeats(t);
     if (live.length > 1) {
       const shortest = live.reduce((a, c) => t.seats[c].stack < t.seats[a].stack ? c : a);
@@ -517,15 +540,35 @@ function endOfHand(m: MatchState) {
   }
 }
 
+/** Merge current-match public stats with an opponent's (scaled) reputation. */
+function remembered(m: MatchState, viewer: number, target: number): PublicStats {
+  const cur = m.stats[target];
+  const rep = m.players[target].reputation;
+  if (!rep || rep.hands <= 0) return { ...cur };
+  const fam = m.players[viewer].familiarity?.[m.players[target].id] ?? 0;
+  const w = Math.min(1, (fam + 2) / 8) * Math.min(1, 30 / rep.hands);
+  const out = { ...cur };
+  for (const k of Object.keys(out) as (keyof PublicStats)[]) out[k] = cur[k] + Math.round(rep[k] * w);
+  return out;
+}
+
 export function buildView(m: MatchState, seat: number): AIView {
   const t = m.table;
   const s = t.seats[seat];
+  const liveIdx = t.seats.map((_, i) => i).filter(i => !t.seats[i].out);
+  // position: order of action postflop, button last
+  const order = liveIdx.map(i => (i - t.dealer - 1 + t.seats.length) % t.seats.length).sort((a, b) => a - b);
+  const myOrd = (seat - t.dealer - 1 + t.seats.length) % t.seats.length;
+  const position = order.length > 1 ? order.indexOf(myOrd) / (order.length - 1) : 1;
+  const leader = liveIdx.reduce((a, b) => (t.seats[b].stack > t.seats[a].stack ? b : a), liveIdx[0]);
   return {
+    position, aggressor: t.aggressor >= 0 && t.aggressor !== seat ? t.aggressor : undefined, isChipLeader: leader === seat,
     seat, hole: [...s.hole], board: [...t.board], street: t.street, pot: potTotal(t), stack: s.stack, committed: s.committed,
     currentBet: t.currentBet, bb: t.level.bb, legal: legalActions(t, seat),
     opponents: t.seats.map((o, i) => ({
       seat: i, stack: o.stack, committed: o.committed, folded: o.folded, allIn: o.allIn, out: o.out,
-      stats: { ...m.stats[i] }, raisedThisHand: m.track.raises[i] > 0, raisedThisStreet: false,
+      stats: remembered(m, seat, i), raisedThisHand: m.track.raises[i] > 0, raisedThisStreet: false,
+      loadout: m.players[i].loadout.map(l => l.defId),
     })).filter(o => o.seat !== seat),
     playersLeft: liveSeats(t).length, isButton: t.dealer === seat, handNo: t.handNo, resolve: m.arsenal[seat].resolve,
   };
@@ -555,6 +598,15 @@ function aiArm(m: MatchState, seat: number, view: AIView, eq: number, action: Ac
         want = !lead.folded && lead.stack > view.stack && eq > 0.55; break;
       }
       case 'sponsors_mark': want = m.arsenal[seat].resolve >= 7; break;
+      case 'tempo_strike': want = aggressive && eq > 0.5; break;
+      case 'blockade': want = aggressive && abilitiesOf(m, seat).some(a => /gambit|siege|tyranny|tempo|wrath|formation|charge/.test(a.def.id)); break;
+      case 'tactical_retreat': want = action.type === 'call' && eq < 0.45 && view.pot > 6 * view.bb; break;
+      case 'interdict': want = m.arsenal[seat].resolve >= 6; break;
+      case 'smoke_screen': want = aggressive && eq < 0.45; break;
+      case 'call_the_bluff': want = action.type === 'call'; break;
+      case 'charge_of_equites': want = aggressive && eq * (live + 1) > 1.4; break;
+      case 'desperate_gambit': want = aggressive || action.type === 'call'; break;
+      case 'final_table_nerves': want = m.arsenal[seat].resolve >= 4; break;
       default: want = false;
     }
     if (want && rng.chance(0.85)) {
@@ -577,7 +629,7 @@ export function step(m: MatchState): boolean {
   const view = buildView(m, seat);
   const infoCount = m.players[seat].loadout.filter(l => ABILITY_MAP[l.defId]?.archetype === 'information').length;
   const prof = infoCount ? { ...m.players[seat].profile, skill: Math.min(1, m.players[seat].profile.skill + 0.04 * infoCount) } : m.players[seat].profile;
-  const d = decide(view, prof, rng, m.aiIters);
+  const d = (m.players[seat].aiVersion === 1 ? decideV1 : decide)(view, prof, rng, m.aiIters);
   aiArm(m, seat, view, d.equity, d.action, rng);
   try { act(m, seat, d.action); }
   catch {

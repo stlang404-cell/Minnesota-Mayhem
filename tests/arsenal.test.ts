@@ -37,7 +37,8 @@ describe('7. arsenal activation timing', () => {
   it('every ability has complete metadata', () => {
     expect(ABILITIES.length).toBeGreaterThanOrEqual(40);
     const arche = new Set(ABILITIES.map(a => a.archetype));
-    expect(arche.size).toBe(8);
+    expect(arche.size).toBe(10);
+    expect(ABILITIES.length).toBeGreaterThanOrEqual(76);
     for (const a of ABILITIES) {
       expect(a.text(a.values[0]).length).toBeGreaterThan(10);
       expect(a.counter.length).toBeGreaterThan(5);
