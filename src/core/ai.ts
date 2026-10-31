@@ -10,13 +10,16 @@ export interface AIProfile {
   risk: number;        // 0..1 willingness to gamble
   adaptation: number;  // 0..1 how much it uses opponent statistics
   skill: number;       // 0..1 estimation accuracy (difficulty)
+  style?: string;      // 3.0: archetype personality (tournament specialists, combo specialists…)
 }
 
 export interface PublicStats {
   hands: number; vpip: number; pfr: number; aggr: number; passive: number;
   foldToRaiseOpp: number; foldToRaise: number; showdowns: number; bluffsShown: number;
+  /** 3.0 bet-size memory (public: sizes are seen, strength only when shown at showdown) */
+  bigBets: number; bigBetsStrong: number; smallBets: number; smallBetsStrong: number;
 }
-export const emptyStats = (): PublicStats => ({ hands: 0, vpip: 0, pfr: 0, aggr: 0, passive: 0, foldToRaiseOpp: 0, foldToRaise: 0, showdowns: 0, bluffsShown: 0 });
+export const emptyStats = (): PublicStats => ({ hands: 0, vpip: 0, pfr: 0, aggr: 0, passive: 0, foldToRaiseOpp: 0, foldToRaise: 0, showdowns: 0, bluffsShown: 0, bigBets: 0, bigBetsStrong: 0, smallBets: 0, smallBetsStrong: 0 });
 
 export interface OpponentView {
   seat: number; stack: number; committed: number; folded: boolean; allIn: boolean; out: boolean;
@@ -176,7 +179,23 @@ export function readOpponent(o: OpponentView): OppRead {
   };
 }
 
-export function decide(v: AIView, p: AIProfile, rng: Rng, iters?: number): AIDecision {
+/** AI 2.0 (kept for benchmarking). */
+export function decideV2(v: AIView, p: AIProfile, rng: Rng, iters?: number): AIDecision { return decideCore(v, p, rng, iters, 2); }
+/** AI 3.0: AI 2.0 + bet-size memory, sizing reads, personality-specific exploitation. */
+export function decide(v: AIView, p: AIProfile, rng: Rng, iters?: number): AIDecision { return decideCore(v, p, rng, iters, 3); }
+
+/** P(strong hand | bet-size bucket) from public showdown memory, with a weak prior. */
+export function sizeRead(s: PublicStats, frac: number): { pStrong: number; base: number; n: number } {
+  const big = frac >= 0.75;
+  const n = big ? s.bigBets ?? 0 : s.smallBets ?? 0;
+  const k = big ? s.bigBetsStrong ?? 0 : s.smallBetsStrong ?? 0;
+  const nAll = (s.bigBets ?? 0) + (s.smallBets ?? 0), kAll = (s.bigBetsStrong ?? 0) + (s.smallBetsStrong ?? 0);
+  const base = (kAll + 1) / (nAll + 2);
+  // shrink the bucket estimate toward the opponent's own baseline (empirical-Bayes style, strength 4)
+  return { pStrong: (k + 4 * base) / (n + 4), base, n };
+}
+
+function decideCore(v: AIView, p: AIProfile, rng: Rng, iters: number | undefined, gen: 2 | 3): AIDecision {
   const L = v.legal;
   const live = v.opponents.filter(o => !o.folded && !o.out);
   const nOpp = live.length;
@@ -210,12 +229,31 @@ export function decide(v: AIView, p: AIProfile, rng: Rng, iters?: number): AIDec
   };
   const fold = () => (L.canCheck ? act({ type: 'check' }) : act({ type: 'fold' }));
   // tournament survival: three left, short and not leading → avoid marginal all-ins
-  const survival = v.playersLeft === 3 && !v.isChipLeader && bbStack < 15 ? 0.06 : v.playersLeft === 3 ? 0.03 : 0;
+  let survival = v.playersLeft === 3 && !v.isChipLeader && bbStack < 15 ? 0.06 : v.playersLeft === 3 ? 0.03 : 0;
+  if (gen === 3 && p.style === 'tournament') survival *= 1.8; // tournament specialists tighten near elimination
   // station / nit / maniac exploitation (scaled by adaptation)
   const stationy = clamp((0.35 - foldy) * 2) * ad;   // calls too much → bluff less, value more
   const nitty = clamp((foldy - 0.55) * 2) * ad;      // folds too much → bluff more
-  const bluffScale = (1 + 1.2 * nitty - 0.8 * stationy) * (0.75 + 0.5 * pos) * (reads.some(r => r.punishesBluffs) ? 1 - 0.5 * ad : 1);
+  let bluffScale = (1 + 1.2 * nitty - 0.8 * stationy) * (0.75 + 0.5 * pos) * (reads.some(r => r.punishesBluffs) ? 1 - 0.5 * ad : 1);
+  if (gen === 3) {
+    const passiveField = avg(r => 1 - r.aggr, 0.5);
+    if (p.aggression > 0.6 && passiveField > 0.65) bluffScale *= 1.25;        // aggressive rivals exploit passive tables
+    if (p.tightness > 0.65) bluffScale *= 0.85;                              // conservative rivals bluff less
+  }
 
+  // --- 3.0 push/fold: pot odds against a (public) shoving range, fold equity from observed folds ---
+  if (gen === 3 && v.street === 'preflop' && bbStack <= 12) {
+    const facingShove = toCall > v.stack * 0.5 || (bettor?.allIn ?? false);
+    if (facingShove) {
+      return eq > potOdds + 0.02 + survival ? act({ type: 'call' }) : (L.canCheck ? act({ type: 'check' }) : act({ type: 'fold' }));
+    }
+    const behind = live.length;
+    const need = 1.05 + 0.3 * p.tightness - 0.25 * p.risk - 0.3 * pos + survival * 3 - 0.6 * Math.max(0, foldy - 0.4) - (bbStack < 6 ? 0.35 : 0) + 0.05 * (behind - 1);
+    if (rel >= need) return L.canRaise ? act({ type: 'allin' }) : callOrCheck();
+    if (L.canCheck) return act({ type: 'check' });
+    if (toCall <= v.bb * 0.5 && rel > 0.8) return act({ type: 'call' });
+    return act({ type: 'fold' });
+  }
   // --- short-stack push/fold, position-aware ---
   if (v.street === 'preflop' && bbStack <= 11) {
     const facingShove = toCall > v.stack * 0.5;
@@ -256,7 +294,7 @@ export function decide(v: AIView, p: AIProfile, rng: Rng, iters?: number): AIDec
     // trap: check strong hands into aggressive opponents to check-raise later
     const aggressiveField = avg(r => r.aggr, 0.4) > 0.5;
     if (eq > 0.8 && aggressiveField && pos < 0.6 && rng.chance(0.2 + 0.35 * ad)) return act({ type: 'check' });
-    if (eq > valueThresh + 0.15 && rng.chance(0.4 + 0.5 * p.aggression)) return raise(stationy > 0.3 ? 0.8 : 0.55 + 0.3 * p.aggression);
+    if (eq > valueThresh + 0.15 && rng.chance(0.4 + 0.5 * p.aggression)) return raise(gen === 3 ? Math.min(1, 0.45 + (eq - valueThresh) * 1.2 + (stationy > 0.3 ? 0.2 : 0)) : stationy > 0.3 ? 0.8 : 0.55 + 0.3 * p.aggression);
     if (eq > valueThresh && rng.chance(0.25 + 0.45 * p.aggression) && (spr < 6 || eq > valueThresh + 0.08)) return raise(0.45);
     const bluffChance = p.bluff * (nOpp === 1 ? 0.42 : 0.15) * (0.6 + ad * foldy) * bluffScale * (v.street === 'river' && reads.some(r => r.punishesBluffs) ? 0.5 : 1);
     if (rng.chance(bluffChance)) return raise(0.45 + 0.25 * rng.next());
@@ -269,8 +307,20 @@ export function decide(v: AIView, p: AIProfile, rng: Rng, iters?: number): AIDec
     margin -= clamp(bRead.bluffy - 0.15) * 0.3 * ad;        // shown bluffs → call lighter
     margin += clamp(0.3 - bRead.aggr) * 0.25 * ad;          // passive bettor rarely bluffs
     if (bRead.taxesFolds) margin -= 0.03 * ad;              // folding to them also costs tribute
+    if (gen === 3 && bettor) {
+      // bet-size memory: how often has this opponent's bet of this size been strong at showdown?
+      const frac = toCall / Math.max(1, pot - toCall);
+      const sr = sizeRead(bettor.stats, frac);
+      // react only to a *pattern*: this size is stronger (or weaker) than the same opponent's usual showdown hands
+      if (sr.n >= 3) margin += (sr.pStrong - sr.base) * 0.5 * ad;
+      if (p.tightness > 0.65 && bRead.bluffy > 0.25) margin -= 0.04;         // conservative rivals punish reckless bluffers
+    }
   }
   const checkedThisStreet = false;
+  if (gen === 3) {
+    const commit = toCall / Math.max(1, v.stack);
+    if (commit > 0.6 && eq < 0.55) margin += 0.05 * (commit - 0.6) / 0.4 + 0.02;   // don't stack off light
+  }
   if (eq > valueThresh + 0.2 && rng.chance(0.35 + 0.5 * p.aggression)) return raise(stationy > 0.3 ? 1.0 : 0.8);
   if (spr > 6 && eq < 0.62 && eq > potOdds + margin) return act({ type: 'call' }); // pot control
   if (eq > potOdds + margin) return act({ type: 'call' });

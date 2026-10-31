@@ -28,7 +28,7 @@ export function seasonPoints(g: GameState, ids: string[], placement: number[], w
 /** Accumulate observable statistics into a competitor's public reputation (bounded). */
 export function addReputation(g: GameState, id: string, s: PublicStats) {
   const r = (g.reputation[id] ??= emptyStats());
-  for (const k of Object.keys(r) as (keyof PublicStats)[]) r[k] += s[k];
+  for (const k of Object.keys(s) as (keyof PublicStats)[]) r[k] = (r[k] ?? 0) + (s[k] ?? 0);
   if (r.hands > 400) for (const k of Object.keys(r) as (keyof PublicStats)[]) r[k] = Math.round(r[k] * 0.75);
 }
 

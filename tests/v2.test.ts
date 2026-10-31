@@ -215,7 +215,7 @@ describe('living world', () => {
     G.startArena(g, 'arena'); autoplay(g, 1);
     const rep = g.reputation.player;
     expect(rep.hands).toBeGreaterThan(0);
-    expect(Object.keys(rep).sort()).toEqual(['aggr', 'bluffsShown', 'foldToRaise', 'foldToRaiseOpp', 'hands', 'passive', 'pfr', 'showdowns', 'vpip'].sort());
+    expect(Object.keys(rep).sort()).toEqual(['aggr', 'bigBets', 'bigBetsStrong', 'bluffsShown', 'foldToRaise', 'foldToRaiseOpp', 'hands', 'passive', 'pfr', 'showdowns', 'smallBets', 'smallBetsStrong', 'vpip'].sort());
     G.startArena(g, 'arena');
     const hp = g.active!.match.players.find(p => p.isHuman)!;
     expect(hp.reputation?.hands).toBe(rep.hands);

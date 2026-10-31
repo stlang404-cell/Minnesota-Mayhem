@@ -1,7 +1,7 @@
 import { ABILITY_MAP, activeSynergies, resolveAbility, ResolvedAbility, setBonuses, SigilId, AbilityDef } from './abilities';
-import { AIProfile, AIView, decide, decideV1, emptyStats, PublicStats } from './ai';
+import { AIProfile, AIView, decide, decideV1, decideV2, emptyStats, PublicStats } from './ai';
 import { equityMC } from './equity';
-import { categoryOf } from './handEval';
+import { categoryOf, evaluate } from './handEval';
 import {
   Action, applyAction, createTable, DEFAULT_CONFIG, finalizeHand, legalActions, liveSeats, placements,
   startHand, Street, TableConfig, TableState, transferChips, potTotal,
@@ -17,7 +17,7 @@ export interface MatchPlayer {
   reputation?: PublicStats;
   /** how many past matches this player has shared with each opponent id (scales memory use) */
   familiarity?: Record<string, number>;
-  aiVersion?: 1 | 2;
+  aiVersion?: 1 | 2 | 3;
 }
 
 export interface SeatArsenal {
@@ -335,6 +335,7 @@ export function act(m: MatchState, seat: number, action: Action) {
   const facingRaise = facing && (street !== 'preflop' || t.currentBet > t.level.bb);
   const isBlind = seat === t.sbSeat || seat === t.bbSeat;
   const betBefore = t.currentBet, aggressorBefore = t.aggressor, preFolds = m.arsenal[seat].consecPreFolds, firstVol = !m.track.vpip[seat];
+  const potBefore = potTotal(t), committedBefore = t.seats[seat].committed;
   applyAction(t, seat, action);
   const last = [...t.log].reverse().find(e => e.seat === seat && ['fold', 'check', 'call', 'bet', 'raise'].includes(e.kind));
   const kind = last?.kind ?? action.type;
@@ -367,7 +368,11 @@ export function act(m: MatchState, seat: number, action: Action) {
     st.aggr++;
     tr.raises[seat]++;
     if (street === 'preflop') { if (!tr.raisedPre[seat]) st.pfr++; tr.raisedPre[seat] = true; if (!tr.vpip[seat]) { tr.vpip[seat] = true; st.vpip++; } m.arsenal[seat].consecPreFolds = 0; }
-    else tr.betPost[seat] = true;
+    else {
+      tr.betPost[seat] = true;
+      const added = t.seats[seat].committed - committedBefore;
+      ((tr as any).betFrac ??= [])[seat] = added / Math.max(1, potBefore);
+    }
     if (street === 'river') tr.riverAgg[seat] = true;
   }
   X2.onAct(m, seat, kind, street, { betBefore, aggressorBefore, facing, preFolds, firstVol });
@@ -395,6 +400,13 @@ function endOfHand(m: MatchState) {
   // public stats from showdown
   if (r.showdown) for (const i of contenders) {
     m.stats[i].showdowns++;
+    const bf = (tr as any).betFrac?.[i];
+    if (bf !== undefined) {
+      const strong = categoryOf(r.scores[i].score) >= 2 ? 1 : 0;
+      const st = m.stats[i];
+      if (bf >= 0.75) { st.bigBets = (st.bigBets ?? 0) + 1; st.bigBetsStrong = (st.bigBetsStrong ?? 0) + strong; }
+      else { st.smallBets = (st.smallBets ?? 0) + 1; st.smallBetsStrong = (st.smallBetsStrong ?? 0) + strong; }
+    }
     if (tr.riverAgg[i] && categoryOf(r.scores[i].score) === 0 && r.winnings[i] === 0) {
       m.stats[i].bluffsShown++;
       emit(m, i, 'bluff', `${t.seats[i].name} is caught bluffing with ${r.scores[i].name}!`);
@@ -402,6 +414,10 @@ function endOfHand(m: MatchState) {
   }
   if (r.uncontested) {
     const w = r.pots[0].winners[0];
+    if (tr.betPost[w] && t.board.length >= 3 && categoryOf(evaluate([...t.seats[w].hole, ...t.board])) === 0) {
+      const lb = ((m as any).largestBluff ??= []);
+      lb[w] = Math.max(lb[w] ?? 0, r.pots[0].amount);
+    }
     if (tr.betPost[w] && postFolders(w).length) emit(m, w, 'bluff', `${t.seats[w].name} takes it down with pressure`);
   }
   for (const p of r.pots) emit(m, p.winners[0], 'win', `${p.winners.map(w => t.seats[w].name).join(' & ')} win${p.winners.length > 1 ? '' : 's'} ${p.amount}${p.handName ? ' — ' + p.handName : ''}`);
@@ -629,7 +645,8 @@ export function step(m: MatchState): boolean {
   const view = buildView(m, seat);
   const infoCount = m.players[seat].loadout.filter(l => ABILITY_MAP[l.defId]?.archetype === 'information').length;
   const prof = infoCount ? { ...m.players[seat].profile, skill: Math.min(1, m.players[seat].profile.skill + 0.04 * infoCount) } : m.players[seat].profile;
-  const d = (m.players[seat].aiVersion === 1 ? decideV1 : decide)(view, prof, rng, m.aiIters);
+  const av = m.players[seat].aiVersion;
+  const d = (av === 1 ? decideV1 : av === 2 ? decideV2 : decide)(view, prof, rng, m.aiIters);
   aiArm(m, seat, view, d.equity, d.action, rng);
   try { act(m, seat, d.action); }
   catch {

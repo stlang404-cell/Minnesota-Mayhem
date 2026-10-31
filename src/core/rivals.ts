@@ -49,6 +49,7 @@ export function makeProfile(style: Archetype, rank: number, rng: Rng): AIProfile
     risk: clamp((base.risk ?? 0.5) + j()),
     adaptation: clamp((base.adaptation ?? 0.45) + j() + rank * 0.03),
     skill: clamp(RANKS[rank].aiSkill + (rng.next() - 0.5) * 0.08),
+    style,
   };
 }
 
