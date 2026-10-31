@@ -172,3 +172,104 @@ describe('save migration v2 → v3 (and v1 → v3)', () => {
     expect(g.player.bankroll).toBe(ledgerSum(g));
   });
 });
+
+import { placeLimit, cancelOrder, processOrders } from '../src/core/orders';
+import { marketPrices } from '../src/core/market';
+describe('Grand Exchange: limit orders', () => {
+  it('buy limit above market fills partially at or better than the limit; escrow is exact', () => {
+    const g = rich(20);
+    const m = g.markets[0];
+    const p0 = marketPrices(m)[1];
+    const lim = Math.min(99, Math.round(p0 * 100) + 6);
+    const bank0 = g.player.bankroll;
+    expect(placeLimit(g, m.id, -1, 1, 'buy', lim, 2000)).toBeNull();
+    const o = g.orders[g.orders.length - 1];
+    expect(o.filled).toBeGreaterThan(0);
+    expect(o.filled).toBeLessThan(2000);              // partial: stops at the limit
+    expect(marketPrices(m)[1]).toBeLessThanOrEqual(lim / 100 + 0.01);
+    const paid = o.fills.reduce((s, f) => s + f.cents, 0);
+    expect(paid / o.filled).toBeLessThanOrEqual(lim * (1 + 0.02) + 1e-6); // avg incl. fee ≤ limit + fee
+    expect(cancelOrder(g, o.id)).toBeNull();
+    expect(cancelOrder(g, o.id)).toMatch(/not open/);
+    expect(bank0 - g.player.bankroll).toBe(paid);    // only fills were spent; the rest of escrow came back exactly once
+    expect(g.player.bankroll).toBe(ledgerSum(g));
+  });
+  it('buy limit below market rests; sell orders reserve shares; orders expire at settlement', () => {
+    const g = rich(21);
+    const m = g.markets[0];
+    expect(placeLimit(g, m.id, -1, 0, 'buy', 1, 50)).toBeNull();
+    const rest = g.orders[g.orders.length - 1];
+    expect(rest.filled).toBe(0);
+    expect(rest.status).toBe('open');
+    G.exchangeTrade(g, m.id, 2, 20);
+    expect(placeLimit(g, m.id, -1, 2, 'sell', 99, 15)).toBeNull();
+    expect(G.exchangeTrade(g, m.id, 2, -10)).toMatch(/reserved/);
+    expect(G.exchangeTrade(g, m.id, 2, -5)).toBeNull();
+    expect(placeLimit(g, m.id, -1, 2, 'sell', 99, 1)).toMatch(/unreserved/);
+    G.marketFastForward(g, m.id);
+    expect(g.orders.filter(o => o.marketId === m.id).every(o => o.status !== 'open')).toBe(true);
+    expect(g.player.bankroll).toBe(ledgerSum(g));
+    expect((g.ledgerTotals.escrow ?? 0) + g.orders.filter(o => o.side === 'buy').reduce((s, o) => s + o.fills.reduce((a, f) => a + f.cents, 0), 0)).toBe(0);
+  });
+  it('rejects invalid orders', () => {
+    const g = rich(22);
+    const m = g.markets[0];
+    expect(placeLimit(g, m.id, -1, 0, 'buy', 0, 5)).toMatch(/Limit/);
+    expect(placeLimit(g, m.id, -1, 0, 'buy', 50, 1.5)).toMatch(/whole/);
+    expect(placeLimit(g, m.id, -1, 0, 'sell', 50, 5)).toMatch(/unreserved/);
+    processOrders(g, 'nope');
+  });
+});
+
+import { ABILITIES, activeSynergies, COMBO_IDS } from '../src/core/abilities';
+import { createMatch, runUntilBlocked } from '../src/core/match';
+import { totalChips } from '../src/core/poker';
+describe('Legendary Arsenal (rule engine)', () => {
+  it('122 abilities, 16 legendaries, ≥10 named combos; every rule ability has a complete rule', () => {
+    expect(ABILITIES.length).toBeGreaterThanOrEqual(120);
+    expect(ABILITIES.filter(a => a.rarity === 'legendary').length).toBeGreaterThanOrEqual(16);
+    expect(COMBO_IDS.length).toBeGreaterThanOrEqual(10);
+    for (const a of ABILITIES.filter(a => (a as any).rule)) {
+      const r = (a as any).rule; expect(r.trigger).toBeTruthy(); expect(r.effect.kind).toBeTruthy();
+      if (a.kind === 'active') expect(a.cost).toBeGreaterThan(0);
+    }
+    expect(new Set(ABILITIES.map(a => a.id)).size).toBe(ABILITIES.length); // stable unique ids
+  });
+  it('deterministic replay and chip conservation with random 3.0 loadouts', () => {
+    const ids = ABILITIES.filter(a => (a as any).rule).map(a => a.id);
+    for (let s = 1; s <= 10; s++) {
+      const mk = () => { const rng = new Rng(s); const m = createMatch([0, 1, 2, 3].map(i => ({ id: 'p' + i, name: 'P' + i, isHuman: false, profile: { aggression: 0.6, bluff: 0.4, tightness: 0.45, risk: 0.55, adaptation: 0.5, skill: 0.6 }, loadout: rng.shuffle([...ids]).slice(0, 8).map(d => ({ defId: d, level: 3 })) })), s * 7); m.aiIters = 30; return m; };
+      const a = mk(), b = mk();
+      while (!a.done) { step(a); expect(totalChips(a.table)).toBe(6000); }
+      runUntilBlocked(b);
+      expect(a.placementIds).toEqual(b.placementIds);
+      expect(a.events.map(e => e.text)).toEqual(b.events.map(e => e.text));
+    }
+  });
+  it('3.0 combos activate only with all three pieces', () => {
+    expect(activeSynergies(['emperors_feint', 'thunder_of_jupiter']).some(s => s.id === 'emperors_gambit')).toBe(false);
+    expect(activeSynergies(['emperors_feint', 'thunder_of_jupiter', 'mask_of_janus']).some(s => s.id === 'emperors_gambit')).toBe(true);
+  });
+});
+
+import { sizeRead, emptyStats } from '../src/core/ai';
+describe('AI 3.0 information boundaries', () => {
+  it('bet-size memory only uses public showdown observations and is pattern-relative', () => {
+    const s = emptyStats();
+    expect(sizeRead(s, 1).n).toBe(0);
+    s.bigBets = 10; s.bigBetsStrong = 9; s.smallBets = 10; s.smallBetsStrong = 2;
+    const big = sizeRead(s, 1), small = sizeRead(s, 0.3);
+    expect(big.pStrong).toBeGreaterThan(big.base);
+    expect(small.pStrong).toBeLessThan(small.base);
+  });
+  it('AI views contain no hidden cards (3.0 fields included)', () => {
+    const g = rich(30);
+    G.startArena(g, 'arena');
+    const m = g.active!.match;
+    while (m.table.toAct < 0 || m.players[m.table.toAct].isHuman) { if (!step(m)) G.playerAct(g, { type: 'call' }); }
+    const v = buildView(m, m.table.toAct);
+    const others = m.table.seats.filter((_, i) => i !== v.seat).flatMap(s => s.hole);
+    expect(JSON.stringify(v.opponents)).not.toMatch(/hole/);
+    expect(v.hole.some(c => others.includes(c))).toBe(false);
+  });
+});

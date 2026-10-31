@@ -104,7 +104,10 @@ export function strength(r: Rival): number {
 /** Plackett-Luce winner probabilities from strengths, softened (exponent 0.5) — calibrated by
  * log-loss against 500 fully simulated matches (see docs/BALANCE_REPORT.md). */
 export function winProbabilities(rs: Rival[]): number[] {
-  const s = rs.map(r => Math.sqrt(strength(r)));
+  // 3.0: out-of-sample study (docs/MARKET_CALIBRATION.md) found pre-match public info nearly uninformative;
+  // the fitted model is softmax(0.1 × rating difference / 100) — deliberately close to uniform.
+  const mean = rs.reduce((a, r) => a + r.rating, 0) / rs.length;
+  const s = rs.map(r => Math.exp(0.1 * (r.rating - mean) / 100));
   const tot = s.reduce((a, b) => a + b, 0);
   return s.map(x => x / tot);
 }

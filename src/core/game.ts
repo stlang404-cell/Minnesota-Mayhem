@@ -6,6 +6,7 @@ import {
 } from './market';
 import { act, activate, createMatch, LoadoutEntry, MatchPlayer, MatchState, rewardMultiplierPct, runUntilBlocked } from './match';
 import { GAUNTLET_PAYOUT, GAUNTLET_STAGES, MODES, ModeKind, todaySeed, TOURNAMENT_RUNNER_UP, TOURNAMENT_SPLIT } from './modes';
+import { expireOrders, processOrders, reservedShares } from './orders';
 import { advanceCircuitMatch, circuitTick, CircuitEvent, ensureCalendar, seasonPlayoffs, sponsoredIn, sponsorShare, Sponsorship } from './circuit';
 import { addReputation, HallEntry, nameOf, news, NewsItem, retireAndReplace, rivalUpkeep, SeasonState, seasonPoints, seasonTick } from './world';
 import { Action } from './poker';
@@ -680,6 +681,7 @@ export function exchangeTrade(g: GameState, id: string, outcome: number, shares:
   const m = marketById(g, id); if (!m) return 'No market';
   if (shares > 0 && sponsoredIn(g, m.rivalIds)) return 'You sponsor a competitor in this match (conflict of interest)';
   const bk = bookOf(m, bookIdx);
+  if (shares < 0 && -shares > (bk?.player.shares[outcome] ?? 0) - reservedShares(g, id, bookIdx, outcome)) return 'Those contracts are reserved by an open sell order (no naked shorts)';
   const res = playerTrade(m, outcome, shares, g.player.bankroll, bookIdx);
   if (!res.ok) return res.error ?? 'Trade failed';
   const verb = shares > 0 ? 'Bought' : 'Sold';
@@ -690,6 +692,7 @@ export function exchangeTrade(g: GameState, id: string, outcome: number, shares:
   if (g.tradeLog.length > 200) g.tradeLog.shift();
   g.stats.exchangeTrades++;
   botsTrade(m, 1); // the crowd reacts to your order flow
+  processOrders(g, id);
   if (g.tutorial && !g.tutorial.done && g.tutorial.step === 6) g.tutorial.step = 7;
   checkAchievements(g);
   return null;
@@ -706,6 +709,7 @@ export function marketStep(g: GameState, id: string): { done: boolean; handEnded
   if (m.status === 'open') startMarketMatch(g, id);
   if (m.status !== 'live') return { done: true, handEnded: false };
   const r = advanceAction(m);
+  if (r.handEnded) processOrders(g, id);
   if (r.done) settleMarket(g, id);
   return r;
 }
@@ -717,6 +721,7 @@ export function startMarketMatch(g: GameState, id: string): string | null {
   const w = new Rng(mix(m.matchSeed, 'withdraw'));
   if (w.chance(0.03)) {
     const who = m.names[w.int(4)];
+    expireOrders(g, m.id);
     const refund = cancel(m, `${who} withdrew before the match`);
     if (refund) ledger(g, refund, 'exchange', `Refund: ${m.title} cancelled`, `refund:${m.id}`);
     notify(g, 'settlement', `${m.title} cancelled — ${who} withdrew. Positions refunded at cost ($${(refund / 100).toFixed(2)}).`);
@@ -732,6 +737,7 @@ export function marketNextHand(g: GameState, id: string): boolean {
   if (m.status === 'open') startMarketMatch(g, id);
   if (m.status !== 'live') return false;
   const done = advanceHand(m);
+  processOrders(g, id);
   if (done) settleMarket(g, id);
   return done;
 }
@@ -745,6 +751,7 @@ export function marketFastForward(g: GameState, id: string) {
 
 export function settleMarket(g: GameState, id: string) {
   const m = marketById(g, id); if (!m || m.status !== 'live' || !m.match?.done) return;
+  expireOrders(g, id);
   const before = realizedTotal(m);
   const s = settle(m);
   if (s.already) return;

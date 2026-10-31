@@ -201,7 +201,8 @@ export function fairEstimate(m: Market): number[] {
   if (!m.match || m.match.table.handNo === 0) return m.prior.slice();
   const seats = m.match.table.seats;
   const total = seats.reduce((s, x) => s + x.stack + x.totalIn, 0);
-  const raw = seats.map((s, i) => s.out ? 0 : ((s.stack + s.totalIn) / total) * Math.pow(m.prior[i] * 4, 0.5));
+  // 3.0 calibrated live model: chip share ^ 0.8 (fitted out of sample; see docs/MARKET_CALIBRATION.md)
+  const raw = seats.map((s, i) => s.out ? 0 : Math.pow((s.stack + s.totalIn) / total, 0.8) * Math.pow(m.prior[i] * 4, 0.25));
   const sum = raw.reduce((a, b) => a + b, 0) || 1;
   return raw.map(x => x / sum);
 }
