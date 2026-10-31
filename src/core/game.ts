@@ -6,6 +6,7 @@ import {
 } from './market';
 import { act, activate, createMatch, LoadoutEntry, MatchPlayer, MatchState, rewardMultiplierPct, runUntilBlocked } from './match';
 import { GAUNTLET_PAYOUT, GAUNTLET_STAGES, MODES, ModeKind, todaySeed, TOURNAMENT_RUNNER_UP, TOURNAMENT_SPLIT } from './modes';
+import { advanceCircuitMatch, circuitTick, CircuitEvent, ensureCalendar, seasonPlayoffs, sponsoredIn, sponsorShare, Sponsorship } from './circuit';
 import { addReputation, HallEntry, nameOf, news, NewsItem, retireAndReplace, rivalUpkeep, SeasonState, seasonPoints, seasonTick } from './world';
 import { Action } from './poker';
 import {
@@ -17,7 +18,7 @@ import {
 } from './rivals';
 import { mix, Rng, RngState } from './rng';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 export const STARTING_BANKROLL = 50000; // $500.00
 export const PODIUM_BONUS = [8, 4, 1, 0];
 
@@ -103,6 +104,14 @@ export interface GameState {
   tradeLog: TradeLogEntry[];
   ceremony: number | null;
   migratedFrom?: number;
+  // ---- v5: The Eternal Empire ----
+  circuit: { events: CircuitEvent[]; counter: number; scheduledThrough: number; history: { id: string; name: string; tier: string; day: number; season: number; champion: string; finalists: string[]; pool: number; playerResult: number }[]; wildcard: string | null; lastSeasonPoints: Record<string, number> };
+  trophies: { id: string; name: string; tier: string; day: number; season: number }[];
+  sponsorships: Sponsorship[];
+  timeline: { day: number; text: string; icon: string }[];
+  legacy: { careerWinnings: number; highestRank: number; largestBluff: number; biggestComeback: number; buildUses: Record<string, number>; tradesWon: number; tradesLost: number; prestigeHistory: { day: number; prestige: number }[] };
+  businessFocus: Record<string, string>;
+  orders: import('./orders').LimitOrder[];
 }
 
 export function v4PlayerDefaults() {
@@ -113,12 +122,24 @@ export function v4WorldDefaults(day: number) {
     reputation: {}, news: [], season: { n: 1, start: day, points: {} }, hall: [], retired: [], gauntlet: null, draft: null,
     daily: { date: 0, best: -1, attempts: 0 }, tournament: null, tournamentHistory: [], tutorial: { step: 0, done: false },
     watchlist: [], tradeLog: [], ceremony: null,
+    ...v5Defaults(),
   };
+}
+export function v5Defaults() {
+  return {
+    circuit: { events: [], counter: 0, scheduledThrough: 0, history: [], wildcard: null, lastSeasonPoints: {} },
+    trophies: [], sponsorships: [], timeline: [], businessFocus: {}, orders: [],
+    legacy: { careerWinnings: 0, highestRank: 0, largestBluff: 0, biggestComeback: 0, buildUses: {}, tradesWon: 0, tradesLost: 0, prestigeHistory: [] },
+  };
+}
+export function milestone(g: GameState, icon: string, text: string) {
+  g.timeline.push({ day: g.day, text, icon });
+  if (g.timeline.length > 120) g.timeline.shift();
 }
 
 // ------------------------------------------------------------------ helpers
 export function rngOf(g: GameState): Rng { return new Rng(g.world); }
-function useRng<T>(g: GameState, f: (r: Rng) => T): T { const r = rngOf(g); const v = f(r); g.world = r.state(); return v; }
+export function useRng<T>(g: GameState, f: (r: Rng) => T): T { const r = rngOf(g); const v = f(r); g.world = r.state(); return v; }
 
 export function notify(g: GameState, kind: Notice['kind'], text: string) {
   g.notices.push({ id: ++g.counter, kind, text, day: g.day });
@@ -181,7 +202,7 @@ export function rivalPlayer(g: GameState, r: Rival, skillBonus = 0): MatchPlayer
   const fam: Record<string, number> = { player: r.vsPlayer.wins + r.vsPlayer.losses };
   return { id: r.id, name: r.name, isHuman: false, loadout: r.loadout, profile: skillBonus ? { ...r.profile, skill: Math.min(0.97, r.profile.skill + skillBonus) } : r.profile, reputation: g.reputation[r.id], familiarity: fam };
 }
-function humanPlayer(g: GameState, loadout = loadoutEntries(g)): MatchPlayer {
+export function humanPlayer(g: GameState, loadout = loadoutEntries(g)): MatchPlayer {
   return { id: 'player', name: g.player.name, isHuman: true, loadout, profile: PLAYER_PROFILE, reputation: g.reputation.player };
 }
 
@@ -229,7 +250,7 @@ export function arenaOptions(g: GameState, today = todaySeed()): ArenaOption[] {
 }
 export const tournamentPool = (entry: number) => entry * 16 + entry * 2;
 
-function pickRivals(g: GameState, rank: number, n: number, exclude: string[] = []): Rival[] {
+export function pickRivals(g: GameState, rank: number, n: number, exclude: string[] = []): Rival[] {
   const busy = g.markets.filter(m => m.status === 'live').flatMap(m => m.rivalIds);
   return useRng(g, r => pickOpponents(g.rivals, rank, r, n, [...busy, ...exclude]));
 }
@@ -252,7 +273,7 @@ export function draftPick(g: GameState, id: string): string | null {
   return null;
 }
 
-function seatAndCreate(g: GameState, players: MatchPlayer[], kind: ArenaKind, id: string, config?: any, shuffleSeed?: number): MatchState {
+export function seatAndCreate(g: GameState, players: MatchPlayer[], kind: ArenaKind, id: string, config?: any, shuffleSeed?: number): MatchState {
   const seed = shuffleSeed ?? useRng(g, r => r.nextU32());
   const order = shuffleSeed !== undefined ? new Rng(shuffleSeed).shuffle([0, 1, 2, 3]) : useRng(g, r => r.shuffle([0, 1, 2, 3]));
   const mk = kind === 'trial' ? 'trial' : kind === 'recovery' ? 'recovery' : 'arena';
@@ -371,6 +392,7 @@ export function recordWorldMatch(g: GameState, m: MatchState, entry: number, sea
   const rivalIds = ids.filter(id => id !== 'player');
   const ratings = rivalIds.map(id => g.rivals.find(r => r.id === id)?.rating ?? 1000);
   recordRivalResult(g.rivals, rivalIds, rivalIds.map(id => ids.indexOf(id)), prizes, entry, ratings);
+  rivalIds.forEach(id => sponsorShare(g, id, prizes[ids.indexOf(id)] ?? 0, 'match prize'));
   seasonPoints(g, ids, ids.map((_, i) => i), seasonWeight);
   m.players.forEach((p, seat) => addReputation(g, p.id, m.stats[seat]));
 }
@@ -486,6 +508,17 @@ export function finishActiveMatch(g: GameState): MatchReport | null {
   }
   let tournamentDone = true;
   if (a.kind === 'tournament' && g.tournament) tournamentDone = advanceTournament(g, a, order, notes);
+  if (a.kind === 'circuit') tournamentDone = advanceCircuitMatch(g, a, order, notes);
+  // legacy / career profile
+  const L = g.legacy;
+  L.careerWinnings += prize + rebate + sponsor;
+  L.highestRank = Math.max(L.highestRank, p.rank);
+  L.buildUses[buildSignature(m.players[seat].loadout.map(l => l.defId))] = (L.buildUses[buildSignature(m.players[seat].loadout.map(l => l.defId))] ?? 0) + 1;
+  const bluff = (m as any).largestBluff?.[seat] ?? 0; if (bluff > L.largestBluff) L.largestBluff = bluff;
+  const minShare = Math.min(...m.history.map(h => h.stacks[seat] / Math.max(1, h.stacks.reduce((s, x) => s + x, 0))));
+  if (place === 0 && minShare < 0.1) { const pct = Math.round((1 - minShare) * 100); if (pct > L.biggestComeback) L.biggestComeback = pct; milestone(g, '🔥', `Comeback victory from ${Math.round(minShare * 100)}% of the chips`); }
+  if (place === 0 && p.wins === 1) milestone(g, '⚔', 'First arena victory');
+  if (trial === 'passed') milestone(g, '♛', `Promoted to ${RANKS[p.rank].name}`);
 
   const report: MatchReport = {
     key: a.key, kind: a.kind, place, prize, entry: a.entry, ratingDelta, newRating: p.rating, trial, newRank, glory, rebate, sponsor, bonusPct,
@@ -497,6 +530,7 @@ export function finishActiveMatch(g: GameState): MatchReport | null {
   g.lastReport = report;
   if (g.active === a) g.active = null;
   if (tournamentDone) advanceDay(g);
+  ensureCalendar(g);
   if (g.tutorial && !g.tutorial.done && g.tutorial.step <= 3) g.tutorial.step = 4;
   checkAchievements(g);
   return report;
@@ -560,6 +594,13 @@ function advanceTournament(g: GameState, a: ActiveMatch, order: string[], notes:
   return true;
 }
 
+export function buildSignature(ids: string[]): string {
+  const c: Record<string, number> = {};
+  ids.forEach(id => { const a = ABILITY_MAP[id]?.archetype; if (a) c[a] = (c[a] ?? 0) + 1; });
+  const top = Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([a]) => a);
+  return top.join('+') || 'none';
+}
+
 export function ordinal(n: number) { return n + (['th', 'st', 'nd', 'rd'][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] ?? 'th'); }
 
 // ------------------------------------------------------------------ World
@@ -594,7 +635,10 @@ export function advanceDay(g: GameState) {
     if (g.rivals.length < 135) rebalancePopulation(g.rivals, rng);
     rivalUpkeep(g);
   });
-  seasonTick(g, (amount, reason, key) => { if (ledger(g, amount, 'season', reason, key)) notify(g, 'victory', `${reason}: +$${(amount / 100).toFixed(2)}`); });
+  circuitTick(g);
+  seasonPlayoffs(g, (amount, reason, key) => { if (ledger(g, amount, 'season', reason, key)) notify(g, 'victory', `${reason}: +$${(amount / 100).toFixed(2)}`); });
+  ensureCalendar(g);
+  g.sponsorships = g.sponsorships.filter(s => s.end >= g.day - 30);
   if (g.player.bankroll < RECOVERY_THRESHOLD) {
     g.player.bankruptcies++;
     notify(g, 'warning', 'Your purse runs thin. Bread & Circuses matches are free — and the Exchange still trades.');
@@ -634,6 +678,7 @@ export function marketById(g: GameState, id: string) { return g.markets.find(m =
 
 export function exchangeTrade(g: GameState, id: string, outcome: number, shares: number, bookIdx = -1): string | null {
   const m = marketById(g, id); if (!m) return 'No market';
+  if (shares > 0 && sponsoredIn(g, m.rivalIds)) return 'You sponsor a competitor in this match (conflict of interest)';
   const bk = bookOf(m, bookIdx);
   const res = playerTrade(m, outcome, shares, g.player.bankroll, bookIdx);
   if (!res.ok) return res.error ?? 'Trade failed';

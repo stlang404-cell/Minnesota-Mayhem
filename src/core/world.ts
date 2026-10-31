@@ -62,6 +62,8 @@ export function retireAndReplace(g: GameState, rng: Rng) {
   const used = new Set(g.rivals.map(r => r.name));
   const busy = new Set(g.markets.filter(m => m.status === 'open' || m.status === 'live').flatMap(m => m.rivalIds));
   if (g.active) g.active.rivalIds.forEach(id => busy.add(id));
+  for (const e of g.circuit?.events ?? []) if (e.status !== 'done') e.roster.forEach(id => busy.add(id));
+  for (const s of g.sponsorships ?? []) if (s.end >= g.day) busy.add(s.rivalId);
   const keep: Rival[] = [];
   let nextIdx = g.rivals.reduce((mx, r) => Math.max(mx, parseInt(r.id.slice(1), 10) || 0), 0) + 1;
   for (const r of g.rivals) {

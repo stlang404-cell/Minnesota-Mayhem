@@ -188,9 +188,9 @@ describe('living world', () => {
     const m = g.markets[0];
     G.marketFastForward(g, m.id);
     if (m.status === 'settled') expect(g.news.some(n => n.kind === 'market' && n.text.startsWith(m.names[m.result]))).toBe(true);
-    for (let d = 0; d < SEASON_LENGTH + 1; d++) G.advanceDay(g);
-    expect(g.hall.length).toBe(1);
+    for (let d = 0; d < SEASON_LENGTH + 2; d++) G.advanceDay(g);
     expect(g.season.n).toBe(2);
+    expect(g.hall.length).toBe(1); // 3.0: the Hall is filled by the playoff champion, not the points leader
     expect(g.hall[0].name).toBeTruthy();
     for (let d = 0; d < 60; d++) G.advanceDay(g);
     expect(g.rivals.length).toBeGreaterThan(100);

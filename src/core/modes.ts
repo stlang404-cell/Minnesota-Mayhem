@@ -2,7 +2,7 @@
 import type { TableConfig } from './poker';
 import { DEFAULT_CONFIG } from './poker';
 
-export type ModeKind = 'arena' | 'trial' | 'recovery' | 'club' | 'grand' | 'quick' | 'highroller' | 'draft' | 'gauntlet' | 'rival' | 'daily' | 'tournament';
+export type ModeKind = 'arena' | 'trial' | 'recovery' | 'club' | 'grand' | 'quick' | 'highroller' | 'draft' | 'gauntlet' | 'rival' | 'daily' | 'tournament' | 'circuit';
 
 export interface ModeDef {
   kind: ModeKind; name: string; icon: string; desc: string;
@@ -24,6 +24,7 @@ export const MODES: Record<ModeKind, ModeDef> = {
   gauntlet: { kind: 'gauntlet', name: 'Survival Gauntlet', icon: '🔥', desc: 'Up to 5 consecutive matches, each harder. Finish top 2 to advance; cash out between stages or lose it all.', entryMult: 2, ratingScale: 0, gloryScale: 1, group: 'modes' },
   rival: { kind: 'rival', name: 'Rival Challenge', icon: '⚔', desc: 'Face your fiercest rival. Finish ahead of them for a bounty of 1.5× entry.', entryMult: 1, ratingScale: 1, gloryScale: 1.5, group: 'modes' },
   daily: { kind: 'daily', name: 'Daily Challenge', icon: '📜', desc: 'One seeded challenge per calendar day: the same fixed Arsenal and deal seed in every career. Free; only the first attempt each day pays.', entryMult: 0, ratingScale: 0, gloryScale: 0.5, group: 'modes' },
+  circuit: { kind: 'circuit', name: 'Imperial Circuit', icon: '🏟', desc: 'Scheduled 16-player circuit events and the seasonal playoffs.', entryMult: 0, ratingScale: 0, gloryScale: 2, group: 'core' },
   tournament: { kind: 'tournament', name: 'Imperial Tournament', icon: '🏆', desc: '16 competitors, four heat tables, one final table. Win your heat to reach the final.', entryMult: 2, ratingScale: 0, gloryScale: 3, group: 'modes' },
 };
 

@@ -1,4 +1,4 @@
-import { GameState, SAVE_VERSION, v4PlayerDefaults, v4WorldDefaults } from './game';
+import { GameState, SAVE_VERSION, v4PlayerDefaults, v4WorldDefaults, v5Defaults } from './game';
 import { hashString } from './rng';
 
 export interface SaveEnvelope { format: 'minnesota-mayhem-save'; version: number; savedAt: number; checksum: string; data: GameState }
@@ -45,6 +45,20 @@ const MIGRATIONS: Record<number, (d: any) => any> = {
     for (const mk of d.markets ?? []) { fixMatch(mk.match); mk.extra ??= []; mk.kind ??= 'winner'; mk.labels ??= mk.names; mk.rule ??= 'Pays $1 if this competitor wins the match.'; }
     d.migratedFrom = 3;
     d.version = 4;
+    return d;
+  },
+  // v4 (2.0 Imperial Ascension) → v5 (3.0 The Eternal Empire)
+  4: d => {
+    const w = v5Defaults();
+    for (const [k, v] of Object.entries(w)) if (d[k] === undefined) d[k] = v;
+    d.legacy.highestRank = Math.max(d.legacy.highestRank ?? 0, d.player?.rank ?? 0);
+    d.legacy.careerWinnings ||= d.stats?.earnedPrizes ?? 0;
+    for (const r of Object.values<any>(d.reputation ?? {})) { r.bigBets ??= 0; r.bigBetsStrong ??= 0; r.smallBets ??= 0; r.smallBetsStrong ??= 0; }
+    if (d.active?.match) for (const st of d.active.match.stats ?? []) { st.bigBets ??= 0; st.bigBetsStrong ??= 0; st.smallBets ??= 0; st.smallBetsStrong ??= 0; }
+    for (const mk of d.markets ?? []) if (mk.match) for (const st of mk.match.stats ?? []) { st.bigBets ??= 0; st.bigBetsStrong ??= 0; st.smallBets ??= 0; st.smallBetsStrong ??= 0; }
+    d.timeline.push({ day: d.day, text: 'Your house enters the age of the Eternal Empire (save upgraded to 3.0)', icon: '🏛' });
+    d.migratedFrom ??= 4;
+    d.version = 5;
     return d;
   },
 };
