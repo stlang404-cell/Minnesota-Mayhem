@@ -12,7 +12,14 @@ import { makeProfile } from '../src/core/rivals';
 import { RANKS } from '../src/core/ranks';
 import { Rng } from '../src/core/rng';
 import { ASSETS } from '../src/core/empire';
+import { SYNERGIES, COMBO_IDS } from '../src/core/abilities';
+import { headToHead } from './ai-benchmark';
+import { allBooks } from '../src/core/market';
 
+const styleLoadout = (style: Archetype, rank: number) => {
+  const own = ABILITIES.filter(a => a.archetype === style && !a.fusion && a.unlockRank <= rank);
+  return own.slice(0, 5).map(a => ({ defId: a.id, level: 1 + Math.floor(rank / 3) }));
+};
 const out: string[] = [];
 const log = (s = '') => { out.push(s); console.log(s); };
 const q = (a: number[], p: number) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
@@ -23,17 +30,13 @@ const T0 = Date.now();
 const ONLY = process.env.BAL_ONLY ?? '';
 const run = (k: string) => !ONLY || ONLY.split(',').includes(k);
 
-log('# Minnesota Mayhem — Balance Report');
+log('# Minnesota Mayhem 2.0 (Imperial Ascension) — Balance Report');
 log(`Generated ${new Date().toISOString()} by \`npm run balance\` (seeded, reproducible).`);
 log('');
 
 if (run('arch')) {
 // ---------------------------------------------------------------- 1. archetypes
 log('## 1. Match duration & archetype win rates (AI-only, 4 archetypes per table)');
-const styleLoadout = (style: Archetype, rank: number) => {
-  const own = ABILITIES.filter(a => a.archetype === style && !a.fusion && a.unlockRank <= rank);
-  return own.slice(0, 5).map(a => ({ defId: a.id, level: 1 + Math.floor(rank / 3) }));
-};
 const tiers = [0, 3, 6];
 const durations: number[] = [];
 const winsBy: Record<string, Record<number, { w: number; n: number }>> = {};
@@ -54,7 +57,7 @@ log(`Matches simulated: ${durations.length}. Hands per match: mean ${mean(durati
 log(`Estimated human duration at ${SECONDS_PER_HAND}s/hand: median ${(q(durations, 0.5) * SECONDS_PER_HAND / 60).toFixed(1)} min (p10 ${(q(durations, 0.1) * SECONDS_PER_HAND / 60).toFixed(1)}, p90 ${(q(durations, 0.9) * SECONDS_PER_HAND / 60).toFixed(1)}). Target 3–6 min.`);
 log(`Hand-cap finishes: ${durations.filter(d => d >= 200).length} (the documented chip-count safety rule).`);
 log('');
-log('Identical AI personalities; only the 5-ability archetype loadout differs. Fair share = 25%.');
+log('Identical AI personalities; only the 5-ability archetype loadout differs (10 archetypes, 4 drawn per table). Fair share = 25%.');
 log('');
 log('| Archetype | ' + tiers.map(t => `${RANKS[t].name} tier`).join(' | ') + ' |');
 log('|---|' + tiers.map(() => '---').join('|') + '|');
@@ -194,6 +197,156 @@ log('## 4. Arena Exchange profitability');
 }
 
 }
+
+if (run('ai')) {
+  log('## 6. AI benchmark (AI 2.0 vs Version 1 AI and baseline strategies)');
+  log('Two seats of each policy per table (seats alternate), no Arsenal, identical personality parameters. Win share = wins ÷ total wins of the two policies.');
+  log('');
+  log('| Opponent policy | Matches | AI 2.0 win share | AI 2.0 avg place | Opponent avg place | AI 2.0 postflop bets+raises per decision | CPU ms / decision |');
+  log('|---|---|---|---|---|---|---|');
+  for (const [opp, n] of [['v1', 400], ['station', 150], ['rock', 150], ['maniac', 150], ['random', 150]] as const) {
+    const [x, y] = headToHead('v2', opp as any, n, 11);
+    log(`| ${opp === 'v1' ? 'Version 1 AI' : opp} | ${n} | ${(x.wins / Math.max(1, x.wins + y.wins) * 100).toFixed(1)}% | ${x.avgPlace.toFixed(2)} | ${y.avgPlace.toFixed(2)} | ${x.bluffRate.toFixed(3)} | ${x.msPerDecision.toFixed(2)} |`);
+  }
+  log('');
+  log('Exploitability indicator: a policy that cannot be exploited by simple fixed strategies should beat all of them; AI 2.0 must also beat Version 1 to justify the upgrade.');
+  log('');
+}
+
+if (run('combos')) {
+  log('## 7. Combo & fusion strength (one build vs three random archetype builds)');
+  const prof = { aggression: 0.5, bluff: 0.25, tightness: 0.5, risk: 0.5, adaptation: 0.5, skill: 0.6 };
+  const builds: [string, string[]][] = [
+    ...SYNERGIES.filter(s => COMBO_IDS.includes(s.id) && s.needs[0] !== '@two_legendaries').map(s => [s.name, s.needs] as [string, string[]]),
+    ["Caesar's Ascension (Ides of March + Wrath of Mars)", ['ides_of_march', 'wrath_of_mars']],
+    ['Iron Executioner (fusion)', ['iron_executioner']], ['Eternal Flame (fusion)', ['eternal_flame']], ['Phantom Tempo (fusion)', ['phantom_tempo']], ["Oracle's Ledger (fusion)", ['oracles_ledger']],
+    ['No abilities (control)', []],
+  ];
+  log('Fair share = 25%. n = 200 matches per build, seats rotated, opponents draw 5-ability archetype builds at level 2.');
+  log('');
+  log('| Build | Win rate | Avg place |');
+  log('|---|---|---|');
+  const N = 200;
+  const flagged: string[] = [];
+  for (const [name, ids] of builds) {
+    let w = 0, pl = 0;
+    for (let k = 0; k < N; k++) {
+      const rng = new Rng(7000 + k);
+      const opp = rng.shuffle(ARCHETYPES.map(a => a.id)).slice(0, 3) as Archetype[];
+      const loads = [ids.map(d => ({ defId: d, level: 2 })), ...opp.map(s => styleLoadout(s, 4).map(l => ({ ...l, level: 2 })))];
+      const rot = k % 4;
+      const order = [0, 1, 2, 3].map(i => (i + rot) % 4);
+      const m = createMatch(order.map(i => ({ id: 'p' + i, name: 'P' + i, isHuman: false, loadout: loads[i], profile: prof })), 88000 + k);
+      m.aiIters = 40; runUntilBlocked(m);
+      const place = m.placementIds.indexOf('p0');
+      if (place === 0) w++; pl += place + 1;
+    }
+    const r = w / N;
+    if (r > 0.36) flagged.push(name);
+    log(`| ${name} | ${(r * 100).toFixed(1)}% | ${(pl / N).toFixed(2)} |`);
+  }
+  log('');
+  log(flagged.length ? `⚠ Above 36%: ${flagged.join(', ')}` : 'No combo or fusion exceeds 36% against three full archetype builds.');
+  log('');
+}
+
+if (run('market2')) {
+  log('## 8. Exchange calibration & simulated trader profitability');
+  const g = G.newGame('Cal', 777);
+  let briW = 0, briF = 0, briL = 0, nW = 0, nF = 0, nL = 0, briMid = 0, nMid = 0;
+  const strat: Record<string, { pnl: number; n: number }> = {};
+  let markets = 0;
+  for (let k = 0; k < 120; k++) {
+    const m = g.markets.find(x => x.status === 'open');
+    if (!m) { G.advanceDay(g); continue; }
+    const pre = allBooks(m).map(bk => [...bk.history[bk.history.length - 1].p]);
+    G.startMarketMatch(g, m.id);
+    let mid: number[] | null = null;
+    for (let h = 0; h < 400 && m.status === 'live'; h++) { G.marketNextHand(g, m.id); if (m.status === 'live' && m.match!.table.handNo === 20) mid = [...m.history[m.history.length - 1].p]; }
+    if (mid && m.status === 'settled') { briMid += mid.reduce((s, p, i) => s + (p - (i === m.result ? 1 : 0)) ** 2, 0); nMid++; }
+    if (m.status !== 'settled') continue;
+    markets++;
+    allBooks(m).forEach((bk, bi) => {
+      const res = bi === 0 ? m.result : bk.result;
+      if (res < 0) return;
+      const brier = pre[bi].reduce((s, p, i) => s + (p - (i === res ? 1 : 0)) ** 2, 0);
+      if (bi === 0) { briW += brier; nW++; } else if (bk.kind === 'first_out') { briF += brier; nF++; } else { briL += brier; nL++; }
+    });
+    for (const bot of m.bots) { const s = (strat[bot.strategy] ??= { pnl: 0, n: 0 }); s.pnl += (bot.pnl ?? 0); s.n++; }
+  }
+  log(`Markets settled: ${markets}. Brier score of the pre-match market price (lower is better; uninformed 4-way = 0.750, uninformed binary = 0.500):`);
+  log(`* Match Winner: ${(briW / Math.max(1, nW)).toFixed(3)} (n=${nW})`);
+  log(`* First Elimination: ${(briF / Math.max(1, nF)).toFixed(3)} (n=${nF})`);
+  log(`* Long Match O/U 40.5: ${(briL / Math.max(1, nL)).toFixed(3)} (n=${nL})`);
+  log(`* Match Winner priced live after hand 20: ${(briMid / Math.max(1, nMid)).toFixed(3)} (n=${nMid}) — public chip counts make live prices far more informative than pre-match ratings.`);
+  log('');
+  log('| Trader strategy | Bot-markets | Total P/L | P/L per market |');
+  log('|---|---|---|---|');
+  for (const [k, v] of Object.entries(strat).sort()) log(`| ${k} | ${v.n} | ${$(v.pnl)} | ${$(v.pnl / Math.max(1, v.n))} |`);
+  log('');
+}
+
+if (run('modes')) {
+  log('## 9. Mode economics (simulated competent player at Gladiator, 25 runs each)');
+  log('| Mode | Avg net $ per run | Avg hands per match | Notes |');
+  log('|---|---|---|---|');
+  for (const kind of ['arena', 'quick', 'highroller', 'draft', 'rival', 'gauntlet', 'tournament'] as G.ArenaKind[]) {
+    let net = 0, hands = 0, matches = 0, runs = 0;
+    for (let k = 0; k < 25; k++) {
+      const g = G.newGame('M' + kind, 4000 + k);
+      g.player.rank = 2; g.player.rating = RANKS[2].threshold + 20; g.player.matches = 8;
+      G.ledger(g, 500000, 'test', 'bankroll');
+      g.rivals.filter(r => r.rank === 2).slice(0, 1).forEach(r => { r.rivalry = 4; r.vsPlayer = { wins: 2, losses: 1 }; });
+      const start = g.player.bankroll;
+      const rng = new Rng(k);
+      if (kind === 'draft') { G.startDraft(g); for (let i = 0; i < 8; i++) G.draftPick(g, g.draft!.options[i].find(o => !g.draft!.picks.includes(o))!); }
+      if (G.startArena(g, kind)) continue;
+      runs++;
+      let guard = 0;
+      while (g.active && guard++ < 10) {
+        const m = g.active.match;
+        let s = 0;
+        while (!m.done && s++ < 50000) { if (!step(m)) { const h = humanTurn(m); if (h >= 0) G.playerAct(g, decide(buildView(m, h), G.PLAYER_PROFILE, rng).action); } }
+        hands += m.table.handNo; matches++;
+        G.finishActiveMatch(g);
+        if (kind === 'gauntlet' && g.gauntlet && !g.active) { if (g.gauntlet.stage >= 2) G.cashOutGauntlet(g); else G.startArena(g, 'gauntlet'); }
+      }
+      if (g.gauntlet && !g.active) G.cashOutGauntlet(g);
+      net += g.player.bankroll - start - (G.netWorth(g) - g.player.bankroll >= 0 ? 0 : 0);
+    }
+    const notes: Record<string, string> = { arena: 'baseline', quick: 'half stakes, short stacks', highroller: '4× entry, sharper rivals', draft: 'temporary level-2 Arsenal', rival: 'bounty for beating the rival', gauntlet: 'cash out at stage 2 policy', tournament: '16 players, heats + final' };
+    log(`| ${kind} | ${$(net / Math.max(1, runs))} | ${(hands / Math.max(1, matches)).toFixed(1)} | ${notes[kind]} |`);
+  }
+  log('');
+}
+
+if (run('inflation')) {
+  log('## 10. Long-run world stability (200 simulated days, no player matches)');
+  const g = G.newGame('Stable', 999);
+  const snap = () => ({ rivals: g.rivals.length, money: g.rivals.reduce((s, r) => s + r.bankroll, 0), avgRating: g.rivals.reduce((s, r) => s + r.rating, 0) / g.rivals.length });
+  const s0 = snap();
+  const t0 = Date.now();
+  for (let d = 0; d < 200; d++) G.advanceDay(g);
+  const s1 = snap();
+  log(`Rivals ${s0.rivals} → ${s1.rivals}; total rival bankroll ${$(s0.money)} → ${$(s1.money)} (${(((s1.money / s0.money) - 1) * 100).toFixed(1)}%); mean rating ${s0.avgRating.toFixed(0)} → ${s1.avgRating.toFixed(0)}; retirements ${g.retired.length}; seasons closed ${g.hall.length}; news items kept ${g.news.length}; save size ${(JSON.stringify(g).length / 1024).toFixed(0)} KB; ${(Date.now() - t0)} ms for 200 days.`);
+  log('');
+}
+
+if (run('compare')) {
+  log('## 11. Version 1 → Version 2 comparison');
+  log('V1 figures are copied from `docs/BALANCE_REPORT_V1.md` (generated before this update); V2 figures from this report.');
+  log('');
+  log('| Metric | Version 1 | Version 2 |');
+  log('|---|---|---|');
+  log('| Abilities / archetypes / fusions | 44 / 8 / 4 | 76 / 10 / 8 (+5 named combos) |');
+  log('| Game modes | Ranked, Trial, Recovery, Club, Grand | + Quick Clash, High Roller, Draft, Gauntlet, Rival Challenge, Daily, Imperial Tournament |');
+  log('| Rival population | 58 static (rebalanced to ≥4/rank) | ~120 with retirement, bankruptcy and rookies |');
+  log('| Exchange books per match | 1 (winner) | 3 (winner, first elimination, long match) |');
+  log('| Simulated trader strategies | 5 | 8 |');
+  log('| Automated tests | 56 | see TEST_RESULTS.txt |');
+  log('');
+}
+
 // ---------------------------------------------------------------- 5. property
 log('## 5. Property payback');
 log('| Asset | Level | Cost | Net/day | Payback (days = arena matches) |');
@@ -203,7 +356,7 @@ for (const a of ASSETS) a.levels.forEach((l, i) => {
   log(`| ${a.name} | ${i + 1} | ${$(l.cost)} | ${$(net)} | ${net > 0 ? Math.ceil(l.cost / net) : 'utility (no income)'} |`);
 });
 log('');
-log('Income levels show diminishing returns per level; maximum combined passive income is bounded (~$141/day net with everything owned) versus Augustus entry fees of $300, so property supplements but never replaces playing.');
+{ const maxNet = ASSETS.reduce((s, a) => s + a.levels.reduce((t, l) => t + l.income - l.upkeep, 0), 0); log(`Maximum combined passive income with every asset fully developed: ${$(maxNet)}/day net, versus a $300 Augustus entry and $1,200 High Roller entry — property supplements but never replaces playing. Payback periods lengthen with each level (diminishing returns).`); }
 log('');
 log(`_Total harness runtime: ${((Date.now() - T0) / 1000).toFixed(0)}s._`);
 mkdirSync('docs', { recursive: true });

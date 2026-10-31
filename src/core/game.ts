@@ -6,7 +6,7 @@ import {
 } from './market';
 import { act, activate, createMatch, LoadoutEntry, MatchPlayer, MatchState, rewardMultiplierPct, runUntilBlocked } from './match';
 import { GAUNTLET_PAYOUT, GAUNTLET_STAGES, MODES, ModeKind, todaySeed, TOURNAMENT_RUNNER_UP, TOURNAMENT_SPLIT } from './modes';
-import { addReputation, HallEntry, nameOf, news, NewsItem, retireAndReplace, SeasonState, seasonPoints, seasonTick } from './world';
+import { addReputation, HallEntry, nameOf, news, NewsItem, retireAndReplace, rivalUpkeep, SeasonState, seasonPoints, seasonTick } from './world';
 import { Action } from './poker';
 import {
   applyRating, prizeTable, RANKS, ratingDeltas, RECOVERY_PRIZES, RECOVERY_THRESHOLD, START_RATING, TRIAL_FAIL_PENALTY,
@@ -19,7 +19,7 @@ import { mix, Rng, RngState } from './rng';
 
 export const SAVE_VERSION = 4;
 export const STARTING_BANKROLL = 50000; // $500.00
-export const PODIUM_BONUS = [6, 3, 0, 0];
+export const PODIUM_BONUS = [8, 4, 1, 0];
 
 export type ArenaKind = ModeKind;
 
@@ -591,7 +591,8 @@ export function advanceDay(g: GameState) {
     }
     for (const ev of evolveRivals(g.rivals, rng)) news(g, ev.up ? 'promotion' : 'demotion', ev.up ? `${ev.name} is promoted to ${RANKS[ev.rank].name}.` : `${ev.name} drops to ${RANKS[ev.rank].name}.`, [ev.id]);
     retireAndReplace(g, rng);
-    rebalancePopulation(g.rivals, rng);
+    if (g.rivals.length < 135) rebalancePopulation(g.rivals, rng);
+    rivalUpkeep(g);
   });
   seasonTick(g, (amount, reason, key) => { if (ledger(g, amount, 'season', reason, key)) notify(g, 'victory', `${reason}: +$${(amount / 100).toFixed(2)}`); });
   if (g.player.bankroll < RECOVERY_THRESHOLD) {

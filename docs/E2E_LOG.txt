@@ -1,0 +1,29 @@
+✔ 1. Start a career bankroll $500; tutorial coach visible: true
+✔ 3. Play a ranked match ✕ 4th Place
+✔ 4. Use abilities armed a ready Arsenal active mid-hand
+✔ 5. Win or lose Dollars $500 → $480
+✔ 6. Upgrade the Arsenal Caesar's Gambit → Lv2 for $40.00
+✔ 7. Create a custom build swapped Augur's Eye for Silver Tongue and saved preset "E2E Bluff"
+✔ 2. Complete the tutorial all 8 learn-by-doing steps completed (match, ability, Forge, Exchange, Empire)
+✔ 8. Play a second game mode Quick Clash finished (✕)
+✔ 9. Face a recurring rival Rival Challenge vs Sextus Severus: Sextus Severus finished ahead of you. The rivalry deepens.
+✔ 10. Earn a promotion passed the Plebeian trial; promotion ceremony shown
+✔ 12. Buy a prediction contract 10 contracts; bankroll $2988.98 → $2985.97
+✔ 13. Sell a contract sold 5 of 10; 5 held
+✔ 11. Watch an AI-only match spectated action-by-action on the live table (hole cards hidden until showdown)
+✔ 14. Hold a contract through settlement Lucretia Glaber Snowborn wins! Your P/L on this match: $6.16 1st Lucretia Glaber 2nd Antonia Aquila 3rd Antonia Maximus 4th Flavia Hiems First Elimination: Flav
+✔ 15. Inspect portfolio P&L exposure/unrealized dashboard + settlement records; net Exchange cash $6.05
+✔ 16. Buy a property Lakeside Villa for $400.00
+✔ 17. Upgrade a property Villa → level 2 for $600.00
+✔ 18. Complete a tournament Heat runner-up: you earn a small share of the pool.
+✔ 19. Earn an achievement 4 achievement(s) unlocked: Student of the Arena, Tournament Veteran, Rising Star, Landlord
+✔ 20. Save and reload bankroll $2006.62 restored after reload
+✔ 21. Migrate a Version 1 save V1 save (schema 3) imported: bankroll $41.61, its in-progress match resumed
+✔ 22. Recover from bankruptcy from $3.00 → $13 via a free Bread & Circuses match
+✔ 23. Reload offline service worker active; reloaded with network disabled; Exchange renders
+✔ No runtime errors (desktop) 
+✔ 24. Play on an iPhone-sized screen iPhone 13: no horizontal overflow on any tab; action buttons 46px and on-screen; full match by touch (16 taps)
+✔ No runtime errors (mobile) 
+✔ 25. Continue through a longer simulated career 40-match career with all invariants (ledger, markets, saves) — plus 6×140-match careers in the balance report
+
+27/27 journey checks passed

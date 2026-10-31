@@ -27,7 +27,9 @@ export const MODES: Record<ModeKind, ModeDef> = {
   tournament: { kind: 'tournament', name: 'Imperial Tournament', icon: '🏆', desc: '16 competitors, four heat tables, one final table. Win your heat to reach the final.', entryMult: 2, ratingScale: 0, gloryScale: 3, group: 'modes' },
 };
 
-export const GAUNTLET_PAYOUT = [0.6, 1.5, 2.6, 4, 6.5]; // × entry, cash-out value after clearing stage i+1
+// × entry, cash-out value after clearing stage i+1. Calibrated so a ~50%-per-stage player is roughly
+// break-even at stage 1 and gains slowly with risk (see BALANCE_REPORT section 9).
+export const GAUNTLET_PAYOUT = [2.2, 4.8, 10, 20, 40];
 export const GAUNTLET_STAGES = 5;
 /** Imperial Tournament payouts as fraction of pool: 1st..4th of final, then the 4 heat runners-up. */
 export const TOURNAMENT_SPLIT = [0.4, 0.22, 0.13, 0.09];

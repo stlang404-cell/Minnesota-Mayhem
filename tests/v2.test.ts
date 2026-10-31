@@ -9,6 +9,7 @@ import { ABILITIES, activeSynergies } from '../src/core/abilities';
 import { allBooks, settle } from '../src/core/market';
 import { RANKS } from '../src/core/ranks';
 import { SEASON_LENGTH } from '../src/core/world';
+import { GAUNTLET_PAYOUT } from '../src/core/modes';
 import { totalChips } from '../src/core/poker';
 
 function autoplay(g: G.GameState, seed = 1) {
@@ -112,7 +113,7 @@ describe('game modes', () => {
       if (g.gauntlet && g.gauntlet.stage === 1) {
         const before = g.player.bankroll;
         expect(G.cashOutGauntlet(g)).toBeNull();
-        expect(g.player.bankroll - before).toBe(Math.round(0.6 * entry));
+        expect(g.player.bankroll - before).toBe(Math.round(GAUNTLET_PAYOUT[0] * entry));
         expect(G.cashOutGauntlet(g)).toMatch(/Nothing/);
         cashed = true;
       } else if (!g.gauntlet) failed = true;
@@ -193,7 +194,9 @@ describe('living world', () => {
     expect(g.hall[0].name).toBeTruthy();
     for (let d = 0; d < 60; d++) G.advanceDay(g);
     expect(g.rivals.length).toBeGreaterThan(100);
-    expect(g.rivals.length).toBeLessThan(160);
+    expect(g.rivals.length).toBeLessThanOrEqual(140);
+    for (let d = 0; d < 140; d++) G.advanceDay(g);
+    expect(g.rivals.length).toBeLessThanOrEqual(140);
     for (let rk = 0; rk < 9; rk++) expect(g.rivals.filter(r => r.rank === rk).length).toBeGreaterThanOrEqual(4);
     expect(g.news.length).toBeLessThanOrEqual(120);
     expect(serialize(g).length).toBeLessThan(6_000_000);

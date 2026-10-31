@@ -85,7 +85,7 @@ function Game({ g, warn }: { g: GameState; warn?: string }) {
         </nav>
       )}
       <div className="toasts" aria-live="polite">{toasts.items.map(t => <div key={t.id} className={`toast ${t.kind}`}>{t.text}</div>)}</div>
-      <TutorialCoach g={g} where={g.active ? 'match' : tab} />
+      <TutorialCoach key={g.active ? 'match' : tab} g={g} where={g.active ? 'match' : tab} />
       {report && !g.ceremony && <ReportModal r={report} g={g} onClose={() => setReport(null)} />}
       {g.ceremony !== null && g.ceremony !== undefined && !g.active && <Ceremony g={g} />}
     </div>

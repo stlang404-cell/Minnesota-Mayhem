@@ -1,4 +1,4 @@
-# Minnesota Mayhem — Game Rules & Design Reference
+# Minnesota Mayhem 2.0 — Game Rules & Design Reference
 
 ## Imperium Poker (the match)
 * Four players, No-Limit Texas Hold'em, 1,500 tournament chips each. Tournament chips are separate from Dollars.
@@ -74,3 +74,40 @@ Villa (rent), Augur's Library (Exchange research), Card Club (Club Nights), Trai
 
 ## Rivals
 ~56 persistent rivals with procedural pixel portraits, names, style archetype, six personality parameters (aggression, bluff, tightness, risk, adaptation, skill), loadouts, bankroll, career record, form, nemesis and rivalry with you. Each day 8 summarised background matches run among rivals (Plackett–Luce on strength), rivals promote/demote, slowly gain skill (bounded by rank) and upgrade abilities. Matches you play and Exchange matches are fully simulated.
+
+## Imperial Ascension additions
+
+### Expansion hooks (resolution order is unchanged)
+`arsenal2.ts` adds hooks at fixed points: **hand start** (Bubble Lord, Endurance Pact, Cartographer), **blinds posted** (Iron Ration), **after each action** (check-raise, 3-bet, flat-call and fold-to-bettor tracking from public actions), **on arm** (Overwatch, Interdict, Tell Reader, Victory Lap discount), **hand end** (effects queued like V1), **per tribute** (Ember Guard / Eternal Flame guards, then Blockade, Imperial Conspiracy and Caesar's Ascension bonuses, then Veto and Wards), and **elimination** (Executioner, Survivor's Purse). Cooldowns are counted in hands. Every effect is still one of the bounded V1 primitives and remains subject to the same per-hand caps.
+
+### Named combos
+| Combo | Pieces | Effect |
+|---|---|---|
+| Imperial Conspiracy | Caesar's Gambit + Senate's Betrayal + Mask of Janus | Gambit/Betrayal tributes +0.25 BB; Mask costs 1 |
+| Golden Legion | Iron Discipline + Golden Touch + Legion Formation | Formation tribute from 2 Formation; +5% prize |
+| Frozen Empire | Frozen Legion + Vestal Vigil + Fortress Wall | +2 Wards; Frozen Legion +2 uses |
+| Senate Collapse | Thunder of Jupiter + Senate Whisper + Caesar's Gambit | Thunder costs 1; Whisper triggers on a single fold |
+| Caesar's Ascension | any two legendary fusions | +1 starting Resolve; +0.25 BB on every tribute you collect |
+
+### Game modes
+| Mode | Rules | Rewards | Unlock |
+|---|---|---|---|
+| Quick Clash | 800 chips, blinds every 3 hands | ½ entry, ½ rating swing, ½ season points | 1 match |
+| Daily Challenge | one Arsenal and deal seed per calendar day (local date) | first attempt pays 3× / 1.5× / 0.5× entry; later attempts are practice | 2 matches |
+| Draft Arena | pick 1 of 3, eight times; level-2 temporary Arsenal | prize table ×1.1, unrated | 3 matches |
+| Rival Challenge | your fiercest rival + 2 | bounty 1.5× entry for finishing ahead of them | a rivalry (3 shared matches) |
+| Survival Gauntlet | up to 5 matches; top-2 to advance; opponents get stronger | cash out 2.2× / 4.8× / 10× / 20× / 40× entry after stage 1–5; fail = lose it | Plebeian |
+| Imperial Tournament | 16 players, four 4-seat heats, winners → final | pool = 18 entries: 40/22/13/9% to the final table, 4% to each heat runner-up | Plebeian + 5 matches |
+| High Roller | 4× entry, rivals +0.06 skill | richer purse, 1.25× rating swing | Gladiator |
+
+### Exchange books
+| Book | Outcomes | Resolution rule | Early lock |
+|---|---|---|---|
+| Match Winner | 4 | last player with chips (hand-cap rule ranks by chips) | — |
+| First Elimination | 4 | first player eliminated; same-hand busts ordered by smaller starting stack | when the first player busts |
+| Long Match | Over / Under | Over if hand 41 is dealt before a champion is decided | when hand 40 completes or the match ends |
+
+### World
+* One canonical write path (`recordWorldMatch`) updates rival careers, season points and reputation for every fully simulated match (yours, Exchange matches, tournament heats). Background bouts are statistical and are labelled as such.
+* News is generated only from those writes: promotions/demotions, upsets (winner priced < 17%), market results, tournaments, seasons, bankruptcies, retirements and rookies.
+* Seasons last 15 days. Points per placement: 10 / 6 / 3 / 1 (Quick Clash and background bouts ×0.5, Imperial Tournament finals ×2). Player rewards: champion 20× entry, top 3 8×, top 10 3×.

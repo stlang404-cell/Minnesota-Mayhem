@@ -95,7 +95,7 @@ export const ABILITIES: AbilityDef[] = [
     values: [0.3, 0.35, 0.45], text: v => `Arm on your turn. If you lose this hand at showdown, the winner refunds ${Math.round(v * 100)}% of your contribution (max 3 BB).`,
     counter: 'Value-bet thinner against the fortress.', price: 15000, unlockRank: 1 },
   { id: 'vestal_vigil', name: 'Vestal Vigil', archetype: 'discipline', rarity: 'epic', kind: 'passive', cost: 0, uses: 0,
-    values: [2, 3, 4], text: v => `Ward: the first ${v} tributes aimed at you each match are negated.`,
+    values: [2, 3, 3], text: v => `Ward: the first ${v} tributes aimed at you each match are negated.`,
     counter: 'Win chips at showdown rather than through tribute.', price: 26000, unlockRank: 3 },
 
   // ---------------- COUNTERPLAY ----------------

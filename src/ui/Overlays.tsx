@@ -29,15 +29,17 @@ export function Ceremony({ g }: { g: GameState }) {
 
 /** Learn-by-doing tutorial coach: one short card per step, advanced by real actions. */
 export function TutorialCoach({ g, where }: { g: GameState; where: string }) {
-  const [min, setMin] = useState(false);
+  const [min, setMin] = useState(() => where === 'match' && typeof window !== 'undefined' && window.innerWidth <= 640);
   const t = g.tutorial;
   if (!t || t.done || t.step >= TUTORIAL.length) return null;
   const s = TUTORIAL[t.step];
   if (s.tab !== where) {
-    if (where !== 'match' && s.tab !== 'match') return <div className="coach mini" role="note">📜 Tutorial: go to <b>{s.tab.toUpperCase()}</b> — {s.title}</div>;
+    const dest = t.step === 4 ? 'forge' : s.tab;
+    if (where !== 'match' && s.tab !== 'match' && dest !== where) return <div className="coach mini" role="note">📜 Tutorial: go to <b>{dest.toUpperCase()}</b> — {t.step === 4 ? 'upgrade your Arsenal' : s.title}</div>;
+    if (dest === where) return <div className="coach" role="note"><div className="coach-head"><span>TUTORIAL {t.step + 1}/{TUTORIAL.length}</span><b>{s.title}</b></div><p>{s.text}</p></div>;
     return null;
   }
-  if (min) return <button className="coach mini" onClick={() => setMin(false)}>📜 Tutorial ({t.step + 1}/{TUTORIAL.length})</button>;
+  if (min) return <button className={`coach mini${where === 'match' ? ' in-match' : ''}`} onClick={() => setMin(false)}>📜 Tutorial ({t.step + 1}/{TUTORIAL.length})</button>;
   return (
     <div className={`coach${where === 'match' ? ' in-match' : ''}`} role="note" aria-live="polite">
       <div className="coach-head"><span>TUTORIAL {t.step + 1}/{TUTORIAL.length}</span><b>{s.title}</b></div>

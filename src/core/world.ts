@@ -80,5 +80,24 @@ export function retireAndReplace(g: GameState, rng: Rng) {
     } else keep.push(r);
   }
   g.rivals = keep;
+  // hard population cap: the longest-serving idle veterans retire first
+  const CAP = 140;
+  if (g.rivals.length > CAP) {
+    const idle = g.rivals.filter(r => !busy.has(r.id)).sort((a, b) => b.career.matches - a.career.matches);
+    for (const r of idle.slice(0, g.rivals.length - CAP)) {
+      news(g, 'retire', `${r.name} hangs up the toga after ${r.career.matches} matches.`, [r.id]);
+      g.retired.push({ id: r.id, name: r.name, rank: r.rank, wins: r.career.wins, matches: r.career.matches, titles: r.career.titles, day: g.day });
+      g.rivals = g.rivals.filter(x => x !== r);
+    }
+    if (g.retired.length > 60) g.retired.splice(0, g.retired.length - 60);
+  }
+}
+
+/** Rival lifestyle spending: wealth above ~30 entries is spent at 5%/day (economic sink, prevents inflation). */
+export function rivalUpkeep(g: GameState) {
+  for (const r of g.rivals) {
+    const excess = r.bankroll - RANKS[r.rank].entry * 30;
+    if (excess > 0) r.bankroll -= Math.round(excess * 0.05);
+  }
 }
 export { emptyStats };

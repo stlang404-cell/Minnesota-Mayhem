@@ -528,10 +528,11 @@ table.ladder tr.me td { color: var(--gold); font-weight: 700; }
 .ceremony-unlocks { text-align: left; background: #0e0916; padding: 10px; margin: 10px 0; font-size: .9rem; box-shadow: 0 0 0 1px var(--gold2); }
 .laurel-burst { position: absolute; inset: -40px; pointer-events: none; background: radial-gradient(circle, rgba(242,201,76,.35), transparent 60%); animation: pulse 2s infinite; }
 /* tutorial coach */
-.coach { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--tabh) + 14px + env(safe-area-inset-bottom)); z-index: 70; width: min(460px, 94vw); background: #0e0916; padding: 12px 14px; box-shadow: 0 0 0 2px #0b0710, 0 0 0 4px var(--gold), 0 10px 30px rgba(0,0,0,.6); animation: slidein .3s; }
+.coach { position: fixed; left: 12px; bottom: calc(var(--tabh) + 14px + env(safe-area-inset-bottom)); z-index: 70; width: min(340px, 70vw); background: #0e0916; padding: 12px 14px; box-shadow: 0 0 0 2px #0b0710, 0 0 0 4px var(--gold), 0 10px 30px rgba(0,0,0,.6); animation: slidein .3s; }
 .coach.in-match { bottom: auto; top: 64px; left: 10px; transform: none; width: min(300px, 92vw); padding: 10px; }
 .coach.in-match p { font-size: .8rem; }
 .coach.mini { width: auto; padding: 8px 12px; font-size: .8rem; border: 0; color: var(--ink); cursor: pointer; }
+.coach.mini.in-match { top: 6px; right: 6px; left: auto; bottom: auto; transform: none; width: auto; max-height: none; }
 .coach-head { display: flex; gap: 10px; align-items: baseline; } .coach-head span { font: 7px var(--px); color: var(--gold); } .coach-head b { font-family: var(--serif); }
 .coach p { margin: 6px 0; font-size: .88rem; }
 /* table effects */
@@ -592,12 +593,15 @@ select { background: #0e0916; color: var(--ink); border: 0; box-shadow: 0 0 0 2p
 .asset-art .flag { position: absolute; top: 4px; width: 6px; height: 10px; background: var(--crimson); box-shadow: -1px 0 0 #f2c94c; }
 .cosmetics h4 { margin: 10px 0 2px; }
 @media (max-width: 640px) {
+  .coach:not(.in-match) { left: 6px; width: min(260px, 66vw); font-size: .8rem; }
   .modes-grid { grid-template-columns: 1fr 1fr; }
   .mode-card { min-height: 110px; padding: 8px; }
   .gauntlet-bar { grid-template-columns: 1fr; }
   .spec-seats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ceremony-card h1 { font-size: 18px; }
-  .coach.in-match { top: auto; bottom: 8px; }
+  .coach.in-match { top: 4px; bottom: auto; left: 4px; right: 4px; width: auto; max-height: 26vh; overflow: auto; padding: 8px; }
+  .coach.in-match p { font-size: .74rem; margin: 4px 0; }
+  .coach.in-match .btn { min-height: 34px; padding: 4px 8px; }
   .history-drawer { top: 60px; }
   .seg button { padding: 7px 6px; }
 }

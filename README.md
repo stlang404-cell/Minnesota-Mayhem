@@ -1,18 +1,23 @@
-# MINNESOTA MAYHEM
+# MINNESOTA MAYHEM 2.0 — *IMPERIAL ASCENSION*
 
 *Roman Poker · Strategic Arsenals · The Arena Exchange · Empire*
 
-A complete, original, fully-local Roman-themed poker strategy game. Rise from **Peasant** to **Augustus** in fast four-player No-Limit Hold'em tournaments, build an eight-slot **Arsenal** of tactical abilities, trade prediction contracts on AI-only matches in the **Arena Exchange**, and invest your Dollars in an **Empire** of villas, clubs and colosseums — all in 16-bit Roman pixel style on a snowy Minnesota frontier.
+A complete, original, fully local Roman-themed poker strategy game. Rise from **Peasant** to **Augustus** in fast four-player No-Limit Hold'em matches. Build an eight-slot **Arsenal** from 76 tactical abilities across 10 archetypes, and chase five named combos. Trade prediction contracts on fully simulated AI matches in the **Arena Exchange**. Buy villas, clubs, colosseums and a palace for your **Empire**, while ~120 rivals rise, fall, retire and make the news around you.
 
 No accounts, no servers, no paid APIs, no ads, no real-money wagering. Fictional Dollars only.
 
-| Arena | Match | Exchange |
+**What's new in 2.0:** see [`docs/CHANGELOG_2.0.md`](docs/CHANGELOG_2.0.md). It has the full before/after table, plus an honest list of what is completed, partial and not implemented.
+
+| Arena | Match | Exchange (live spectator) |
 |---|---|---|
-| ![arena](docs/screenshots/arena.png) | ![match](docs/screenshots/match.png) | ![exchange](docs/screenshots/exchange-settled.png) |
+| ![arena](docs/screenshots/v2/02-arena.png) | ![match](docs/screenshots/v2/03-match.png) | ![exchange](docs/screenshots/v2/11-spectator.png) |
+| ![ceremony](docs/screenshots/v2/10-ceremony.png) | ![forge](docs/screenshots/v2/07-forge.png) | ![iPhone](docs/screenshots/v2/m-match.png) |
 
 ## Play loops
-* **PLAY → EARN → UPGRADE → CLIMB** — ranked 4-player matches (≈3 min), prize money, Forge upgrades, promotion trials.
-* **RESEARCH → TRADE → SETTLE → INVEST** — LMSR prediction markets on fully simulated AI matches, property income.
+* **PLAY → EARN → UPGRADE → CLIMB** — press PLAY for a ~3-minute ranked match, then win Dollars, upgrade in the Forge and earn your promotion trial.
+* **RESEARCH → TRADE → INVEST** — three contract books per AI match: Winner, First Elimination and Long Match.
+* **OWN → IMPROVE → PROFIT** — properties with upgrade levels, income and upkeep, and perks they unlock.
+* New players see only the essentials. Seven extra modes unlock as you play: Quick Clash, Daily Challenge, Draft Arena, Rival Challenge, Survival Gauntlet, Imperial Tournament and High Roller. An 8-step tutorial teaches by doing.
 
 ## Quick start — Windows (one click after setup)
 1. Install **Node.js LTS** from https://nodejs.org (one time).
@@ -56,6 +61,8 @@ After the first load from `localhost`, a service worker caches every asset (`dis
 ## Project structure
 ```
 src/core/            pure TypeScript simulation (no DOM) — fully unit-tested
+  arsenal2.ts          expansion ability hooks (cooldowns, combos, tournament & tactical archetypes)
+  modes.ts world.ts    game modes; news, seasons, Hall of Champions, retirement, reputation
   rng.ts               seeded sfc32 RNG (no Math.random in simulation)
   cards.ts handEval.ts 7-card hand evaluator
   poker.ts             NL Hold'em tournament engine: betting legality, side pots, eliminations
@@ -77,26 +84,22 @@ server.mjs           dependency-free local server;  *.bat / play.sh launchers
 ## Verification
 | Check | Command | Result |
 |---|---|---|
-| Unit & integration tests (areas 1–20, 23, 24) | `npm test` | **56/56 pass** — see `docs/TEST_RESULTS.txt` |
-| Browser playthrough (journey steps 1–15, offline (21), iPhone viewport (22)) | `npm run build && npm run serve` then `npm run test:e2e` | **19/19 pass** — see `docs/E2E_RESULTS.json`, `docs/screenshots/` |
-| Balance simulations | `npm run balance` | see `docs/BALANCE_REPORT.md` |
+| Unit & integration tests | `npm test` | **72/72 pass** — `docs/TEST_RESULTS.txt` |
+| 25-step browser journey (desktop, offline, iPhone 13) | `npm run build && npm run serve`, then `npm run test:e2e` | **27/27 checks** (25 steps + no runtime errors on desktop & mobile) — `docs/E2E_RESULTS.json`, screenshots in `docs/screenshots/v2/` |
+| Version 1 regression journey | `npm run test:e2e:v1` | V1 results kept in `docs/E2E_RESULTS_V1.json` |
+| Balance & AI benchmark | `npm run balance` | `docs/BALANCE_REPORT.md` (V1 baseline: `docs/BALANCE_REPORT_V1.md`) |
+| Ability coverage | `COVERAGE_MAIN=1 npx vite-node scripts/ability-coverage.ts` | trigger counts for all 76 abilities |
 
-Test coverage map: hand rankings, ties, betting legality, side pots, all-in, eliminations (`poker.test.ts`); Arsenal timing, combo resolution & chip conservation over full matches with random 8-ability loadouts, AI information boundaries, determinism (`arsenal.test.ts`); rating, trials, Dollar ledger, Forge, property, LMSR pricing, execution, positions, settlement, MM loss bound, cancellation/refunds, trading locks, bankruptcy recovery (`meta.test.ts`); save/load round-trip incl. live match & market, deterministic restoration, corruption, migration, IndexedDB slot recovery, 40-match career invariants (`save.test.ts`).
-
-### Balance highlights (from `docs/BALANCE_REPORT.md`)
-* 720 AI matches: median **41 hands ≈ 3.1 minutes** at human pace (p90 3.7 min); max 59 hands; the hand-cap safety rule never fired.
-* Archetype win rates (fair share 25%): every archetype between **16% and 35%** at every tier tested — no dominant build.
-* The harness caught and fixed real problems: Last Stand's refund could take a winner's entire late-game stack (now bounded by contribution and half the winner's gain; win-rate impact cut from +13 to ~+4 points); Legion Formation and Tax Collector were over-tuned; market priors over-rated favourites (re-calibrated by log-loss over 500 matches); early ranks were too slow (podium bonus added).
-* Simulated competent player: Plebeian after ~8 matches, Gladiator ~19, Centurion ~49; the top ranks remain demanding (Caesar reached in 2 of 6 140-match careers).
-* Broke players were never stuck: recovery to a ranked entry took a median of 1 free match (max 3).
-* Exchange: naive strategies lose slowly to fees and spread; the LMSR loss bound was never violated.
+### Save migration
+A Version 1 save (schema 3) loads automatically. Before migrating, the untouched original is copied to `backup-v3` in IndexedDB. Ability IDs, properties, rival records, active markets, transactions, prestige and even an in-progress match all carry over. This is verified by a unit test and by a browser import of a frozen real V1 save (`tests/fixtures/v1-save.json`).
 
 ## Known limitations
-* **Not a native app.** It is a web app/PWA. True offline iPhone play requires hosting `dist/` on HTTPS yourself (free static hosts work); LAN play from the PC is online-only (see above).
-* Sound effects are simple synthesised chip/card blips and fanfares — no music.
-* Art is procedural/hand-authored pixel art (portraits, buildings, icons, arena scenes); there are no character animations beyond cards, banners, snow and aurora.
-* The AI is a solid heuristic + Monte-Carlo player, not a solver; strong human players will find exploits, and the top ranks are tuned to be hard for a mid-skill bot rather than for a perfect player.
-* Balance numbers come from AI-vs-AI simulation; human playtesting will shift them. Information abilities mainly help *you* (equity, pot odds, opponent stats); for AI rivals they are modelled as sharper reading of public stats plus wards.
-* The Exchange's simulated traders are funded by an LMSR subsidy (≈$110 per market on average, always within the theoretical bound); this is fiction, not a model of a real exchange.
-* Rival background matches are summarised (statistical) for performance; only your matches and Exchange matches are fully simulated hand-by-hand.
-* Saves are per browser/device; there is no cloud sync by design.
+* **Not a native app.** True offline iPhone play requires hosting `dist/` on HTTPS (any free static host); LAN play from the PC needs the PC running.
+* **Arsenal size:** 76 abilities, not 100+. Only abilities with distinct, coverage-tested mechanics were added.
+* **Exchange:** no tournament-champion or promotion markets, and no limit orders.
+* **Pre-match prices barely predict winners** (Brier ≈ uniform). In a 4-player poker knockout, ratings carry little signal. Live prices between hands, driven by public chip counts, are much more informative (see balance report §8).
+* **Simulated traders are funded by the LMSR subsidy** (~$110 per market, always within the theoretical bound). Momentum traders lose; value traders profit.
+* **AI:** strong heuristic + Monte-Carlo, not a solver. Its memory of you is public statistics only.
+* **Audio:** synthesized effects only, no music. Art is procedural and hand-authored pixel art.
+* **Balance figures come from AI-vs-AI simulation;** human play will shift them.
+* **Saves are per browser/device;** use Export/Import to move a career.

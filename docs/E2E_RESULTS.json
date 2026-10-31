@@ -1,83 +1,118 @@
 [
   {
-    "step": "1. Launch game",
+    "step": "1. Start a career",
     "ok": true,
-    "detail": "title screen rendered"
+    "detail": "bankroll $500; tutorial coach visible: true"
   },
   {
-    "step": "2. Start a career",
+    "step": "3. Play a ranked match",
     "ok": true,
-    "detail": "bankroll $500"
+    "detail": "✕ 4th Place"
   },
   {
-    "step": "3. Play a full four-player match",
+    "step": "4. Use abilities",
     "ok": true,
-    "detail": "128 decisions; result: ✕ 2nd Place"
-  },
-  {
-    "step": "4. Use an Arsenal ability",
-    "ok": true,
-    "detail": "armed an active ability (Augur's Eye / War Drums) during the match"
+    "detail": "armed a ready Arsenal active mid-hand"
   },
   {
     "step": "5. Win or lose Dollars",
     "ok": true,
-    "detail": "$500 → $508.98"
+    "detail": "$500 → $480"
   },
   {
-    "step": "6. Buy an upgrade",
+    "step": "6. Upgrade the Arsenal",
     "ok": true,
     "detail": "Caesar's Gambit → Lv2 for $40.00"
   },
   {
-    "step": "7. Enter another match",
+    "step": "7. Create a custom build",
     "ok": true,
-    "detail": "66 decisions"
+    "detail": "swapped Augur's Eye for Silver Tongue and saved preset \"E2E Bluff\""
   },
   {
-    "step": "8. Progress toward promotion",
+    "step": "2. Complete the tutorial",
     "ok": true,
-    "detail": "rating 1012 → 989; objective: OBJECTIVE Visit the EXCHANGE and back a rival in an AI match."
+    "detail": "all 8 learn-by-doing steps completed (match, ability, Forge, Exchange, Empire)"
   },
   {
-    "step": "9. View an AI-only match market",
+    "step": "8. Play a second game mode",
     "ok": true,
-    "detail": "competitors: Decimus Calvus the Young, Lucius Calvus, Drusilla Severus, Decimus Nerva"
+    "detail": "Quick Clash finished (✕)"
   },
   {
-    "step": "10. Purchase a prediction contract",
+    "step": "9. Face a recurring rival",
     "ok": true,
-    "detail": "position: 10 @ 26¢ value $2.58"
+    "detail": "Rival Challenge vs Sextus Severus: Sextus Severus finished ahead of you. The rivalry deepens."
   },
   {
-    "step": "11. Watch / fast-forward the match",
+    "step": "10. Earn a promotion",
     "ok": true,
-    "detail": "watched 3 hands live, then fast-forwarded"
+    "detail": "passed the Plebeian trial; promotion ceremony shown"
   },
   {
-    "step": "12. Settle the contract",
+    "step": "12. Buy a prediction contract",
     "ok": true,
-    "detail": "Drusilla Severus wins! Your P/L on this market: −$2.55 (fees $0.06) 1st Drusilla Severus 2nd Decimus Nerva 3rd Lucius Calvus 4th Decimus Calvus (bankroll $448.98 → $446.37)"
+    "detail": "10 contracts; bankroll $2988.98 → $2985.97"
   },
   {
-    "step": "13. Buy an Empire asset",
+    "step": "13. Sell a contract",
+    "ok": true,
+    "detail": "sold 5 of 10; 5 held"
+  },
+  {
+    "step": "11. Watch an AI-only match",
+    "ok": true,
+    "detail": "spectated action-by-action on the live table (hole cards hidden until showdown)"
+  },
+  {
+    "step": "14. Hold a contract through settlement",
+    "ok": true,
+    "detail": "Lucretia Glaber Snowborn wins! Your P/L on this match: $6.16 1st Lucretia Glaber 2nd Antonia Aquila 3rd Antonia Maximus 4th Flavia Hiems First Elimination: Flav"
+  },
+  {
+    "step": "15. Inspect portfolio P&L",
+    "ok": true,
+    "detail": "exposure/unrealized dashboard + settlement records; net Exchange cash $6.05"
+  },
+  {
+    "step": "16. Buy a property",
     "ok": true,
     "detail": "Lakeside Villa for $400.00"
   },
   {
-    "step": "14. Save and reload",
+    "step": "17. Upgrade a property",
     "ok": true,
-    "detail": "bankroll $46.37 and Villa restored after reload"
+    "detail": "Villa → level 2 for $600.00"
   },
   {
-    "step": "15. Recover from a low bankroll",
+    "step": "18. Complete a tournament",
     "ok": true,
-    "detail": "imported a $5 save; free Bread & Circuses match available; bankroll after: $15"
+    "detail": "Heat runner-up: you earn a small share of the pool."
   },
   {
-    "step": "21. Offline operation",
+    "step": "19. Earn an achievement",
     "ok": true,
-    "detail": "service worker active; reloaded with network disabled and the game loaded"
+    "detail": "4 achievement(s) unlocked: Student of the Arena, Tournament Veteran, Rising Star, Landlord"
+  },
+  {
+    "step": "20. Save and reload",
+    "ok": true,
+    "detail": "bankroll $2006.62 restored after reload"
+  },
+  {
+    "step": "21. Migrate a Version 1 save",
+    "ok": true,
+    "detail": "V1 save (schema 3) imported: bankroll $41.61, its in-progress match resumed"
+  },
+  {
+    "step": "22. Recover from bankruptcy",
+    "ok": true,
+    "detail": "from $3.00 → $13 via a free Bread & Circuses match"
+  },
+  {
+    "step": "23. Reload offline",
+    "ok": true,
+    "detail": "service worker active; reloaded with network disabled; Exchange renders"
   },
   {
     "step": "No runtime errors (desktop)",
@@ -85,13 +120,18 @@
     "detail": ""
   },
   {
-    "step": "22. Mobile responsiveness",
+    "step": "24. Play on an iPhone-sized screen",
     "ok": true,
-    "detail": "iPhone 13 viewport: no horizontal overflow; action button 46px tall; full match played by touch (83 taps)"
+    "detail": "iPhone 13: no horizontal overflow on any tab; action buttons 46px and on-screen; full match by touch (16 taps)"
   },
   {
     "step": "No runtime errors (mobile)",
     "ok": true,
     "detail": ""
+  },
+  {
+    "step": "25. Continue through a longer simulated career",
+    "ok": true,
+    "detail": "40-match career with all invariants (ledger, markets, saves) — plus 6×140-match careers in the balance report"
   }
 ]
