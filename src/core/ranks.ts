@@ -57,3 +57,11 @@ export function prizeTable(entry: number): number[] {
 }
 export const RECOVERY_PRIZES = [3000, 1500, 500, 0];
 export const RECOVERY_THRESHOLD = 4000; // bankroll below $40 unlocks free Bread & Circuses matches
+
+/** Optional display divisions inside a rank: III (entry) → II → I (ready for trial). */
+export function division(rank: number, rating: number): 'III' | 'II' | 'I' | '' {
+  if (rank >= RANKS.length - 1) return '';
+  const lo = RANKS[rank].threshold, hi = RANKS[rank + 1].threshold;
+  const f = (rating - lo) / (hi - lo);
+  return f >= 2 / 3 ? 'I' : f >= 1 / 3 ? 'II' : 'III';
+}

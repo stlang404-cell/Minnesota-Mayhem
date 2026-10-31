@@ -31,6 +31,8 @@ const MIGRATIONS: Record<number, (d: any) => any> = {
     d.player = { ...v4PlayerDefaults(), ...d.player };
     d.player.career.hands = d.player.career.hands || 0;
     d.settings = { volume: 0.7, ...d.settings };
+    d.player.equipped = { frame: 'frame_bronze', banner: 'banner_crimson', victory: 'victory_laurels', ...d.player.equipped };
+    for (const c of ['frame_bronze', 'banner_crimson', 'victory_laurels']) if (!d.player.cosmetics.includes(c)) d.player.cosmetics.push(c);
     // existing players have already learned the basics
     d.tutorial = { step: 99, done: (d.player.matches ?? 0) > 0 };
     if (d.active) {

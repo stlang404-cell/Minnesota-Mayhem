@@ -39,7 +39,7 @@ export interface PlayerState {
   loadout: string[];
   presets: { name: string; uids: string[] }[];
   cosmetics: string[];
-  equipped: { cardback: string; felt: string; title: string };
+  equipped: { cardback: string; felt: string; title: string; frame: string; banner: string; victory: string };
   uidCounter: number;
   bankruptcies: number;
   // ---- v4 ----
@@ -146,7 +146,7 @@ export function newGame(name: string, seed = Date.now() >>> 0): GameState {
     player: {
       name: name || 'Lupus', bankroll: 0, rating: START_RATING, rank: 0, prestige: 0, glory: 0, peakRating: START_RATING,
       matches: 0, wins: 0, top2: 0, trialsPassed: 0, trialsFailed: 0, owned: [], loadout: [], presets: [],
-      cosmetics: ['back_crimson', 'felt_green'], equipped: { cardback: 'back_crimson', felt: 'felt_green', title: '' }, uidCounter: 0, bankruptcies: 0,
+      cosmetics: ['back_crimson', 'felt_green', 'frame_bronze', 'banner_crimson', 'victory_laurels'], equipped: { cardback: 'back_crimson', felt: 'felt_green', title: '', frame: 'frame_bronze', banner: 'banner_crimson', victory: 'victory_laurels' }, uidCounter: 0, bankruptcies: 0,
       ...v4PlayerDefaults(),
     },
     rivals, markets: [], archive: [], active: null, lastReport: null, empire: {}, ledger: [], ledgerTotals: {}, appliedKeys: [],
@@ -294,7 +294,7 @@ export function startArena(g: GameState, kind: ArenaKind, today = todaySeed()): 
       const cands = g.rivals.filter(x => x.rank === g.player.rank).sort((a, b) => a.id.localeCompare(b.id));
       const opp = rng.shuffle([...cands]).slice(0, 3);
       players = [humanPlayer(g, lo), ...opp.map(x => rivalPlayer(g, x))];
-      shuffleSeed = mix('daily-seat', today);
+      shuffleSeed = mix('daily-seat', today) >>> 0;
       meta = { date: today, paid: g.daily.date !== today };
       if (g.daily.date !== today) g.daily = { date: today, best: -1, attempts: 0 };
       g.daily.attempts++;
@@ -851,7 +851,7 @@ export function buyCosmetic(g: GameState, id: string): string | null {
 }
 export function equipCosmetic(g: GameState, id: string) {
   const c = COSMETICS.find(x => x.id === id); if (!c || !g.player.cosmetics.includes(id)) return;
-  g.player.equipped[c.kind] = c.kind === 'title' && g.player.equipped.title === id ? '' : id;
+  (g.player.equipped as any)[c.kind] = c.kind === 'title' && g.player.equipped.title === id ? '' : id;
 }
 
 export function canAscend(g: GameState) { return g.player.rank === RANKS.length - 1 && g.player.rating >= RANKS[RANKS.length - 1].threshold + 60; }
@@ -870,6 +870,7 @@ export function ascend(g: GameState): string | null {
 export function nextObjective(g: GameState): string {
   const p = g.player;
   if (g.active) return 'Finish your match in the arena.';
+  if (g.gauntlet && g.gauntlet.stage > 0) return `Survival Gauntlet: cash out or brave stage ${g.gauntlet.stage + 1}.`;
   if (p.matches === 0) return 'Press PLAY to fight your first match.';
   if (p.bankroll < RECOVERY_THRESHOLD) return 'Low funds: play a free Bread & Circuses match to rebuild.';
   if (p.rank < RANKS.length - 1) {
@@ -884,7 +885,42 @@ export function nextObjective(g: GameState): string {
   return `Reach ${RANKS[8].threshold + 60} rating to unlock Ascension.`;
 }
 
+// ------------------------------------------------------------------ Tutorial (learn by doing)
+export const TUTORIAL: { tab: string; title: string; text: string }[] = [
+  { tab: 'arena', title: 'Welcome to the Frozen Fields', text: 'Press the big PLAY button to enter your first four-player match.' },
+  { tab: 'match', title: 'Your first hand', text: 'Your two cards are at the bottom. CHECK or CALL to stay in, RAISE to pressure, FOLD to give up the hand. Glowing Arsenal icons are abilities you can arm right now — try War Drums before you raise.' },
+  { tab: 'match', title: 'Resolve and abilities', text: 'Abilities cost Resolve (◆), which grows every second hand. Passives trigger by themselves. Outlast all three rivals to win!' },
+  { tab: 'match', title: 'Keep fighting', text: 'Use the speed buttons or ⏭ to skip ahead. The match ends when one competitor holds every chip.' },
+  { tab: 'arena', title: 'Dollars earned', text: 'Prizes and entry fees change your bankroll. Now open the FORGE to strengthen your Arsenal.' },
+  { tab: 'forge', title: 'The Forge', text: 'Select an ability, then Buy or Upgrade it. Equip up to eight. Three of one archetype grant a set bonus.' },
+  { tab: 'exchange', title: 'The Arena Exchange', text: 'Back AI competitors in their own matches. Buy contracts that pay $1 if your pick wins — prices move only when someone trades.' },
+  { tab: 'empire', title: 'Your Empire', text: 'Properties earn daily income or unlock perks. One day passes per arena match. That is everything — now climb to Augustus!' },
+];
+export function tutorialEvent(g: GameState, ev: 'tab:forge' | 'tab:exchange' | 'tab:empire' | 'forge:buy' | 'armed' | 'acted' | 'skip' | 'next') {
+  const t = g.tutorial;
+  if (!t || t.done) return;
+  if (ev === 'skip') { t.done = true; return; }
+  if (ev === 'next') { t.step++; }
+  else if (ev === 'armed' && t.step <= 2) t.step = 3;
+  else if (ev === 'acted' && t.step === 1) t.step = 2;
+  else if (ev === 'tab:forge' && t.step === 4) t.step = 5;
+  else if (ev === 'forge:buy' && t.step === 5) t.step = 6;
+  else if (ev === 'tab:exchange' && t.step === 5) t.step = 6;
+  else if (ev === 'tab:empire' && t.step === 7) t.step = 8;
+  if (t.step >= TUTORIAL.length) { t.done = true; g.player.glory += 0; notify(g, 'achievement', 'Tutorial complete — the Empire is yours to conquer.'); if (!g.achievements.includes('student')) g.achievements.push('student'); }
+}
+
 export const ACHIEVEMENTS: { id: string; name: string; desc: string; test: (g: GameState) => boolean }[] = [
+  { id: 'student', name: 'Student of the Arena', desc: 'Complete the tutorial.', test: g => g.tutorial?.done && g.achievements.includes('student') },
+  { id: 'quick', name: 'Lightning Legate', desc: 'Win a Quick Clash.', test: g => (g.lastReport?.kind === 'quick' && g.lastReport.place === 0) || g.achievements.includes('quick') },
+  { id: 'drafter', name: 'Master of the Draft', desc: 'Finish top 2 in a Draft Arena.', test: g => (g.lastReport?.kind === 'draft' && g.lastReport.place <= 1) },
+  { id: 'gauntlet3', name: 'Through the Fire', desc: 'Clear 3 Gauntlet stages.', test: g => g.player.gauntletBest >= 3 || (g.gauntlet?.stage ?? 0) >= 3 },
+  { id: 'champion', name: 'Imperial Champion', desc: 'Win an Imperial Tournament.', test: g => g.player.titles >= 1 },
+  { id: 'tourney', name: 'Tournament Veteran', desc: 'Complete an Imperial Tournament.', test: g => g.player.tournaments >= 1 },
+  { id: 'nemesis', name: 'Nemesis Vanquished', desc: 'Finish ahead of the same rival in 3 Rival Challenges.', test: g => Object.values(g.player.rivalWins).some(v => v >= 3) },
+  { id: 'daily', name: 'Daily Devotion', desc: 'Win a Daily Challenge.', test: g => g.daily?.best === 0 },
+  { id: 'season', name: 'Season Contender', desc: 'Finish a season in the top 10.', test: g => g.hall.some(h => h.playerPlace > 0 && h.playerPlace <= 10) },
+  { id: 'palace', name: 'Palace of the North Star', desc: 'Own the Palace.', test: g => (g.empire.palace ?? 0) > 0 },
   { id: 'first_blood', name: 'First Blood', desc: 'Win an arena match.', test: g => g.player.wins >= 1 },
   { id: 'veteran', name: 'Veteran', desc: 'Play 25 matches.', test: g => g.player.matches >= 25 },
   { id: 'promoted', name: 'Rising Star', desc: 'Pass a promotion trial.', test: g => g.player.trialsPassed >= 1 },

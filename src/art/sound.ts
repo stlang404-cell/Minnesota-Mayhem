@@ -1,7 +1,9 @@
 /** Tiny synthesised sound effects (WebAudio). No external audio files. */
 let ctx: AudioContext | null = null;
 let enabled = true;
+let volume = 0.7;
 export function setSound(on: boolean) { enabled = on; }
+export function setVolume(v: number) { volume = Math.max(0, Math.min(1, v)); }
 function ac(): AudioContext | null {
   if (!enabled) return null;
   try { ctx = ctx ?? new (window.AudioContext || (window as any).webkitAudioContext)(); } catch { return null; }
@@ -13,7 +15,7 @@ function tone(freq: number, dur: number, type: OscillatorType = 'square', vol = 
   const o = a.createOscillator(), g = a.createGain();
   o.type = type; o.frequency.value = freq;
   const t0 = a.currentTime + delay;
-  g.gain.setValueAtTime(vol, t0);
+  g.gain.setValueAtTime(Math.max(0.0002, vol * volume * 1.4), t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   o.connect(g).connect(a.destination);
   o.start(t0); o.stop(t0 + dur + 0.02);
@@ -28,4 +30,6 @@ export const sfx = {
   coin: () => { tone(988, 0.06, 'square', 0.04); tone(1319, 0.12, 'square', 0.04, 0.06); },
   error: () => tone(110, 0.15, 'sawtooth', 0.04),
   elim: () => [400, 300, 200].forEach((f, i) => tone(f, 0.12, 'sawtooth', 0.03, i * 0.09)),
+  allin: () => { tone(110, 0.3, 'sawtooth', 0.04); [220, 330, 440].forEach((f, i) => tone(f, 0.12, 'square', 0.03, 0.1 + i * 0.06)); },
+  defeat: () => [330, 262, 196].forEach((f, i) => tone(f, 0.25, 'triangle', 0.04, i * 0.15)),
 };

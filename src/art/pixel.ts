@@ -107,3 +107,25 @@ export function portraitURL(seed: number, rank: number, style: string): string {
   cache.set(key, url);
   return url;
 }
+
+/** Procedural 16×16 rank insignia: a shield whose ornament grows with rank. */
+export function insigniaURL(rank: number): string {
+  const key = `ins:${rank}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const [c, x] = canvas(16, 16);
+  const COL = ['#8d7b68', '#a3a3a3', '#c0603a', '#b33a3a', '#3a7bb3', '#7a3ab3', '#d4a017', '#e8c33a', '#fff2a8'];
+  const p = (a: number, b: number, w: number, h: number, col: string) => { x.fillStyle = col; x.fillRect(a, b, w, h); };
+  // shield
+  p(3, 2, 10, 8, '#1a1020'); p(4, 3, 8, 7, COL[rank]);
+  for (let k = 0; k < 4; k++) p(4 + k, 10 + k, 8 - k * 2, 1, k === 3 ? '#1a1020' : COL[rank]);
+  // chevrons = rank within tier
+  for (let k = 0; k <= Math.min(2, rank % 3); k++) p(5, 5 + k * 2, 6, 1, '#1a1020');
+  if (rank >= 3) { p(7, 3, 2, 8, '#f2c94c'); }             // gold spine for officers
+  if (rank >= 6) { for (let k = 0; k < 6; k++) { p(1, 8 - k, 1, 1, '#4f9e4f'); p(14, 8 - k, 1, 1, '#4f9e4f'); } } // laurels
+  if (rank >= 7) { p(5, 0, 6, 2, '#f2c94c'); p(6, 0, 1, 1, '#fff'); p(9, 0, 1, 1, '#fff'); } // crown
+  if (rank === 8) { p(0, 0, 1, 1, '#fff2a8'); p(15, 0, 1, 1, '#fff2a8'); p(0, 15, 1, 1, '#fff2a8'); p(15, 15, 1, 1, '#fff2a8'); }
+  const url = c.toDataURL();
+  cache.set(key, url);
+  return url;
+}

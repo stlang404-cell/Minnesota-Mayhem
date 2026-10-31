@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { ASSETS, COSMETICS, dailyNet } from '../core/empire';
 import { ascend, buyAsset, buyCosmetic, canAscend, equipCosmetic, GameState, netWorth, sellAsset } from '../core/game';
 import { RANKS } from '../core/ranks';
 import { dispatch, exportSave, importSave, closeGame, persist } from '../store';
 import { wipeSave } from '../core/save';
-import { setSound, sfx } from '../art/sound';
+import { setSound, setVolume, sfx } from '../art/sound';
 import { money, Panel, Sprite } from './common';
 
 export function EmpireTab({ g, toast }: { g: GameState; toast: (t: string, k?: string) => void }) {
@@ -48,7 +48,7 @@ export function EmpireTab({ g, toast }: { g: GameState; toast: (t: string, k?: s
           const net = next ? next.income - next.upkeep : 0;
           return (
             <div key={a.id} className={`asset${lv ? ' owned' : ''}${locked ? ' locked' : ''}`}>
-              <div className="asset-art"><Sprite kind="building" name={a.icon} size={72} />{lv > 0 && <span className="lv">Lv {lv}</span>}</div>
+              <div className={`asset-art lv${lv}`}><Sprite kind="building" name={a.icon} size={72} />{lv > 0 && <span className="lv">Lv {lv}</span>}{Array.from({ length: lv }, (_, k) => <i key={k} className="flag" style={{ left: `${8 + k * 26}px` }} aria-hidden="true" />)}</div>
               <div className="asset-body">
                 <b>{a.name}</b>
                 <p>{a.desc}</p>
@@ -71,16 +71,17 @@ export function EmpireTab({ g, toast }: { g: GameState; toast: (t: string, k?: s
       <div className="grid2">
         <Panel title="Imperial Wardrobe">
           <div className="cosmetics">
-            {COSMETICS.map(c => {
+            {COSMETICS.map((c, idx) => {
+              const header = idx === 0 || COSMETICS[idx - 1].kind !== c.kind ? <h4 key={'h' + c.kind}>{{ cardback: 'Card backs', felt: 'Table felts', title: 'Titles', frame: 'Portrait frames', banner: 'Arena banners', victory: 'Victory effects' }[c.kind]}</h4> : null;
               const own = p.cosmetics.includes(c.id);
-              const eq = p.equipped[c.kind] === c.id;
-              return (
+              const eq = (p.equipped as any)[c.kind] === c.id;
+              return (<Fragment key={c.id}>{header}
                 <div key={c.id} className={`cosm ${c.kind}${own ? ' own' : ''}`}>
                   <span className={`cosm-swatch ${c.id}`} />
                   <span>{c.name}</span>
                   {own ? <button className={'btn small' + (eq ? ' on' : '')} onClick={() => dispatch(g => equipCosmetic(g, c.id))}>{eq ? (c.kind === 'title' ? 'Worn' : 'Equipped') : 'Equip'}</button>
                     : <button className="btn small gold" onClick={() => run(g => buyCosmetic(g, c.id), `${c.name} purchased`)}>{money(c.price)}{p.rank < c.unlockRank && p.prestige === 0 ? ` · 🔒${RANKS[c.unlockRank].name}` : ''}</button>}
-                </div>
+                </div></Fragment>
               );
             })}
           </div>
@@ -100,6 +101,9 @@ export function EmpireTab({ g, toast }: { g: GameState; toast: (t: string, k?: s
         </Panel>
         <Panel title="Settings & Saves">
           <label className="check"><input type="checkbox" checked={g.settings.sound} onChange={e => { dispatch(g => { g.settings.sound = e.target.checked; }); setSound(e.target.checked); }} /> Sound effects</label>
+          <label className="check">Volume <input type="range" min={0} max={1} step={0.05} value={g.settings.volume ?? 0.7} onChange={e => { const v = +e.target.value; dispatch(g => { g.settings.volume = v; }); setVolume(v); sfx.chip(); }} aria-label="Volume" /></label>
+          <label className="check">Default match speed <select value={g.settings.speed} onChange={e => dispatch(g => { g.settings.speed = +e.target.value; })}><option value={1}>1×</option><option value={2}>2×</option><option value={3}>4×</option></select></label>
+          <label className="check"><input type="checkbox" checked={!(g.tutorial?.done)} onChange={e => dispatch(g => { g.tutorial = { step: e.target.checked ? 0 : 99, done: !e.target.checked }; })} /> Show tutorial</label>
           <label className="check"><input type="checkbox" checked={g.settings.reducedMotion} onChange={e => dispatch(g => { g.settings.reducedMotion = e.target.checked; })} /> Reduced motion</label>
           <div className="row wrap">
             <button className="btn" onClick={doExport}>⬇ Export save</button>

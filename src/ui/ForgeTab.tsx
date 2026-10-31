@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ABILITIES, ABILITY_MAP, activeSynergies, ARCHETYPES, resolveAbility, setBonuses, SIGILS, SigilId, SYNERGIES, upgradeCost } from '../core/abilities';
-import { applySigil, buyAbility, dismantle, fuse, fusionRecipes, GameState, loadPreset, priceOf, removeSigil, savePreset, toggleEquip, upgradeAbility } from '../core/game';
+import { ABILITIES, ABILITY_MAP, activeSynergies, ARCHETYPES, COMBO_IDS, resolveAbility, setBonuses, SIGILS, SigilId, SYNERGIES, upgradeCost } from '../core/abilities';
+import { tutorialEvent, applySigil, buyAbility, dismantle, fuse, fusionRecipes, GameState, loadPreset, priceOf, removeSigil, savePreset, toggleEquip, upgradeAbility } from '../core/game';
 import { RANKS } from '../core/ranks';
 import { dispatch } from '../store';
 import { sfx } from '../art/sound';
@@ -11,14 +11,28 @@ export function ForgeTab({ g, toast }: { g: GameState; toast: (t: string, k?: st
   const [filter, setFilter] = useState<string>('all');
   const [sel, setSel] = useState<string>(p.owned[0]?.defId ?? ABILITIES[0].id);
   const [presetName, setPresetName] = useState('');
+  const [compare, setCompare] = useState<string | null>(null);
   const owned = (id: string) => p.owned.find(o => o.defId === id);
   const equippedIds = p.loadout.map(u => p.owned.find(o => o.uid === u)?.defId).filter(Boolean) as string[];
   const d = ABILITY_MAP[sel];
   const inst = owned(sel);
   const run = (f: (g: GameState) => string | null, ok: string) => {
     const err = dispatch(f);
-    if (err) { sfx.error(); toast(err, 'error'); } else { sfx.coin(); if (ok) toast(ok, 'purchase'); }
+    if (err) { sfx.error(); toast(err, 'error'); } else { sfx.coin(); if (ok) toast(ok, 'purchase'); dispatch(g => tutorialEvent(g, 'forge:buy')); }
   };
+  // build recommendations: complete set bonuses and named combos with what you own or can buy
+  const counts: Record<string, number> = {};
+  equippedIds.forEach(id => { const a = ABILITY_MAP[id].archetype; counts[a] = (counts[a] ?? 0) + 1; });
+  const recs: string[] = [];
+  for (const [arch, n] of Object.entries(counts)) if (n === 2 || n === 4) {
+    const cand = ABILITIES.find(a => a.archetype === arch && !a.fusion && !equippedIds.includes(a.id) && a.unlockRank <= p.rank);
+    if (cand) recs.push(`Add ${cand.name} for a ${ARCHETYPES.find(x => x.id === arch)?.name} ×${n + 1} set bonus.`);
+  }
+  for (const c of SYNERGIES.filter(x => COMBO_IDS.includes(x.id) && x.needs[0] !== '@two_legendaries')) {
+    const have = c.needs.filter(n => equippedIds.includes(n)).length;
+    if (have === 2) recs.push(`One piece from ${c.name}: equip ${c.needs.filter(n => !equippedIds.includes(n)).map(n => ABILITY_MAP[n].name).join('')}.`);
+  }
+  if (p.loadout.length < 8) recs.push(`You have ${8 - p.loadout.length} empty slot(s).`);
   const list = ABILITIES.filter(a => (filter === 'all' || a.archetype === filter) && (!a.fusion || owned(a.id)));
   const sets = setBonuses(equippedIds);
   const syn = activeSynergies(equippedIds);
@@ -44,6 +58,7 @@ export function ForgeTab({ g, toast }: { g: GameState; toast: (t: string, k?: st
           {sets.map(s => <span key={s.archetype} className="syn" style={{ borderColor: archColor(s.archetype) }}>{ARCHETYPES.find(a => a.id === s.archetype)?.name} ×{s.count}: +{s.startResolve} starting Resolve</span>)}
           {syn.map(s => <span key={s.id} className="syn gold">⚭ {s.name}: {s.desc}</span>)}
         </div>
+        {recs.length > 0 && <div className="recs">💡 {recs.slice(0, 3).join(' ')}</div>}
         <div className="presets">
           <input placeholder="Build name" value={presetName} onChange={e => setPresetName(e.target.value)} maxLength={20} aria-label="Preset name" />
           <button className="btn" onClick={() => { dispatch(g => savePreset(g, presetName.trim())); toast('Build saved'); }}>Save build</button>
@@ -81,6 +96,16 @@ export function ForgeTab({ g, toast }: { g: GameState; toast: (t: string, k?: st
                 <tbody><tr><td>Magnitude</td>{[1, 2, 3].map(l => <td key={l} className={inst?.level === l ? 'cur' : ''}>{resolveAbility({ defId: d.id, level: l, sigil: inst?.sigil }).value}</td>)}</tr></tbody>
               </table>
               {would.length > 0 && <p className="syn gold">Equipping activates: {would.map(s => `${s.name} (${s.desc})`).join(', ')}</p>}
+              <div className="row wrap"><label className="muted">Compare with: <select value={compare ?? ''} onChange={e => setCompare(e.target.value || null)}><option value="">—</option>{ABILITIES.filter(a => a.id !== sel).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label></div>
+              {compare && ABILITY_MAP[compare] && (
+                <table className="levels compare"><thead><tr><th></th><th>{d.name}</th><th>{ABILITY_MAP[compare].name}</th></tr></thead><tbody>
+                  {(['archetype', 'rarity', 'kind'] as const).map(k => <tr key={k}><td>{k}</td><td>{String(d[k])}</td><td>{String(ABILITY_MAP[compare][k])}</td></tr>)}
+                  <tr><td>Cost</td><td>{d.kind === 'active' ? `${d.cost}◆` : '—'}</td><td>{ABILITY_MAP[compare].kind === 'active' ? `${ABILITY_MAP[compare].cost}◆` : '—'}</td></tr>
+                  <tr><td>Uses</td><td>{d.uses || '∞'}</td><td>{ABILITY_MAP[compare].uses || '∞'}</td></tr>
+                  <tr><td>Lv1→3</td><td>{d.values.join(' / ')}</td><td>{ABILITY_MAP[compare].values.join(' / ')}</td></tr>
+                  <tr><td>Effect</td><td className="small">{d.text(d.values[0])}</td><td className="small">{ABILITY_MAP[compare].text(ABILITY_MAP[compare].values[0])}</td></tr>
+                </tbody></table>
+              )}
               {partners.length > 0 && <p className="muted">Synergy partners: {partners.map(s => `${s.name} with ${s.needs.filter(n => n !== sel).map(n => ABILITY_MAP[n].name).join(', ')}`).join(' · ')}</p>}
               <div className="anvil-actions">
                 {!inst && !d.fusion && <button className="btn gold" disabled={d.unlockRank > p.rank} onClick={() => run(g => buyAbility(g, d.id), '')}>Buy · {money(priceOf(g, d.price))}</button>}
@@ -108,6 +133,24 @@ export function ForgeTab({ g, toast }: { g: GameState; toast: (t: string, k?: st
           )}
         </Panel>
       </div>
+
+      <Panel title="Named Combos" right={<span className="muted">Three-piece combinations with real mechanics</span>}>
+        <div className="fusions">
+          {SYNERGIES.filter(x => COMBO_IDS.includes(x.id)).map(c => {
+            const two = c.needs[0] === '@two_legendaries';
+            const have = two ? equippedIds.filter(id => ABILITY_MAP[id]?.rarity === 'legendary').length : c.needs.filter(n => equippedIds.includes(n)).length;
+            const need = two ? 2 : c.needs.length;
+            return (
+              <div key={c.id} className={`fusion${have >= need ? ' done' : ''}`}>
+                <div className="recipe">{two ? <span>Any 2 legendaries</span> : c.needs.map(n => <span key={n} className={equippedIds.includes(n) ? '' : 'dim'}><AbilityIcon defId={n} /></span>)}</div>
+                <b>{c.name} {have >= need ? '✓ ACTIVE' : `(${have}/${need})`}</b>
+                <small>{c.desc}</small>
+                {!two && <small className="muted">{c.needs.map(n => ABILITY_MAP[n].name).join(' + ')}</small>}
+              </div>
+            );
+          })}
+        </div>
+      </Panel>
 
       <Panel title="Legendary Fusions" right={<span className="muted">Combine two abilities into one legendary (both are consumed)</span>}>
         <div className="fusions">

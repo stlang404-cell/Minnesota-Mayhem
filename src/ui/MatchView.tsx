@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ABILITY_MAP, resolveAbility } from '../core/abilities';
-import { describe, evaluate } from '../core/handEval';
+import { describe, evaluate, categoryOf, CATEGORY_NAMES } from '../core/handEval';
 import { abilitiesOf, armable, MAX_RESOLVE, MatchState, step, runUntilBlocked } from '../core/match';
-import { legalActions, potTotal, levelFor } from '../core/poker';
-import { GameState, finishActiveMatch, forfeit, playerAct, playerActivate, playerSeat, MatchReport, ordinal } from '../core/game';
+import { legalActions, potTotal, levelFor, buildPots } from '../core/poker';
+import { MODES } from '../core/modes';
+import { GameState, finishActiveMatch, forfeit, playerAct, playerActivate, playerSeat, MatchReport, ordinal, tutorialEvent } from '../core/game';
 import { hashString } from '../core/rng';
 import { RANKS } from '../core/ranks';
 import { dispatch, touch } from '../store';
@@ -17,11 +18,17 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
   const m = a.match;
   const t = m.table;
   const hs = playerSeat(m);
-  const [speed, setSpeed] = useState(g.settings.reducedMotion ? 2 : 1);
+  const [speed, setSpeed] = useState(g.settings.reducedMotion ? Math.max(2, g.settings.speed ?? 1) : (g.settings.speed ?? 1));
   const [raiseTo, setRaiseTo] = useState(0);
   const [tip, setTip] = useState<string | null>(null);
   const [flash, setFlash] = useState<{ text: string; kind: string } | null>(null);
   const [confirmQuit, setConfirmQuit] = useState(false);
+  const [chips, setChips] = useState<{ id: number; pos: number; allin: boolean }[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [replay, setReplay] = useState<{ hand: number; i: number } | null>(null);
+  const prevCommit = useRef<number[]>(t.seats.map(s => s.totalIn));
+  const prevAllIn = useRef<boolean[]>(t.seats.map(s => s.allIn));
+  const chipId = useRef(0);
   const lastEvent = useRef(m.eventCounter);
   const lastLog = useRef(t.log[t.log.length - 1]);
   const human = m.players[hs];
@@ -49,6 +56,22 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
     if (logs.some(l => l.kind === 'raise' || l.kind === 'bet' || l.kind === 'call')) sfx.chip();
     else if (logs.some(l => l.kind === 'fold')) sfx.fold();
     if (logs.some(l => l.kind === 'hand' || l.kind === 'street')) sfx.card();
+  });
+  // chip-flight & all-in effects derived from real chip movements
+  useEffect(() => {
+    const fresh: { id: number; pos: number; allin: boolean }[] = [];
+    t.seats.forEach((s, i) => {
+      const k = (i - hs + 4) % 4;
+      if (s.totalIn > (prevCommit.current[i] ?? 0) && t.handActive) fresh.push({ id: ++chipId.current, pos: k, allin: s.allIn });
+      if (s.allIn && !prevAllIn.current[i] && t.handActive) sfx.allin();
+    });
+    prevCommit.current = t.seats.map(s => s.totalIn);
+    prevAllIn.current = t.seats.map(s => s.allIn);
+    if (fresh.length && !g.settings.reducedMotion) {
+      setChips(c => [...c, ...fresh].slice(-8));
+      const ids = fresh.map(f => f.id);
+      setTimeout(() => setChips(c => c.filter(x => !ids.includes(x.id))), 600);
+    }
   });
   useEffect(() => { if (!flash) return; const id = setTimeout(() => setFlash(null), 2200); return () => clearTimeout(id); }, [flash]);
 
@@ -94,16 +117,16 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
   });
 
   function doAct(type: 'fold' | 'check' | 'call' | 'raise' | 'allin') {
-    const err = dispatch(g => playerAct(g, type === 'raise' ? { type, amount: raiseTo } : { type }));
+    const err = dispatch(g => { const e = playerAct(g, type === 'raise' ? { type, amount: raiseTo } : { type }); if (!e) tutorialEvent(g, 'acted'); return e; });
     if (err) { sfx.error(); setFlash({ text: err, kind: 'error' }); }
   }
   function arm(id: string) {
-    const ok = dispatch(g => playerActivate(g, id));
+    const ok = dispatch(g => { const r = playerActivate(g, id); if (r) tutorialEvent(g, 'armed'); return r; });
     if (ok) { sfx.ability(); setFlash({ text: `${ABILITY_MAP[id].name} armed!`, kind: 'ability' }); }
   }
   function collect() {
     const r = dispatch(g => finishActiveMatch(g));
-    if (r) { if (r.trial === 'passed') sfx.promote(); else if (r.prize > 0) sfx.coin(); onReport(r); }
+    if (r) { if (r.trial === 'passed') sfx.promote(); else if (r.prize > 0) sfx.coin(); else if (r.place >= 2) sfx.defeat(); onReport(r); }
   }
 
   const pot = potTotal(t) + (t.handActive ? 0 : 0);
@@ -130,15 +153,16 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
   const stepPot = (f: number) => Math.min(L.maxRaiseTo, Math.max(L.minRaiseTo, Math.round(t.currentBet + (pot + L.toCall) * f)));
 
   return (
-    <div className={`match felt-${g.player.equipped.felt}`}>
+    <div className={`match felt-${g.player.equipped.felt}${m.done && m.placementIds[0] !== 'player' && m.placementIds.indexOf('player') >= 2 ? ' defeat' : ''}`}>
       <div className="match-top">
         <div className="match-info">
-          <b>{a.kind === 'trial' ? `PROMOTION TRIAL → ${RANKS[a.rankAtStart + 1]?.name}` : a.kind === 'recovery' ? 'BREAD & CIRCUSES' : RANKS[a.rankAtStart].arena}</b>
+          <b>{a.kind === 'trial' ? `PROMOTION TRIAL → ${RANKS[a.rankAtStart + 1]?.name}` : a.kind === 'arena' ? RANKS[a.rankAtStart].arena : `${MODES[a.kind].icon} ${MODES[a.kind].name}${a.meta?.stage === 'final' ? ' — FINAL TABLE' : a.meta?.stage === 'heat' ? ' — Heat' : a.kind === 'gauntlet' ? ` — Stage ${(a.meta?.stage ?? 0) + 1}` : ''}`}</b>
           <span>Hand {t.handNo} · Blinds {t.level.sb}/{t.level.bb}{t.level.ante ? ` · ante ${t.level.ante}` : ''} · next {nextLv.sb}/{nextLv.bb} in {nextLevelIn}</span>
         </div>
         <div className="speed" role="group" aria-label="Speed">
           {[1, 2, 3].map(s => <button key={s} className={speed === s ? 'on' : ''} onClick={() => setSpeed(s)}>{['', '1×', '2×', '4×'][s]}</button>)}
           <button onClick={() => setSpeed(4)} title="Skip to your next decision">⏭</button>
+          <button className={showHistory ? 'on' : ''} onClick={() => setShowHistory(!showHistory)} title="Hand history & replay">📜</button>
           <button className="danger" onClick={() => setConfirmQuit(true)} title="Concede">⚑</button>
         </div>
       </div>
@@ -149,6 +173,8 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
             {[0, 1, 2, 3, 4].map(i => t.board[i] !== undefined ? <PlayingCard key={i + '-' + t.board[i]} card={t.board[i]} delay={i < 3 ? i * 90 : 0} /> : <div key={i} className="pcard slot" />)}
           </div>
           <div className="pot">POT <b>{pot || (res && !t.handActive ? res.pots.reduce((s, p) => s + p.amount, 0) : 0)}</b></div>
+          {t.handActive && t.seats.some(s => s.allIn && !s.out) && (() => { const pots = buildPots(t.seats); return pots.length > 1 ? <div className="side-pots">{pots.map((p, i) => <span key={i}>{i === 0 ? 'Main' : `Side ${i}`} {p.amount}</span>)}</div> : null; })()}
+          {chips.map(c => <i key={c.id} className={`chip-fly from${c.pos}${c.allin ? ' big' : ''}`} aria-hidden="true" />)}
           {!t.handActive && res && <div className="hand-result">{t.log.filter(l => l.hand === res.hand && l.kind === 'win').slice(-2).map((l, i) => <div key={i}>{l.text}</div>)}</div>}
         </div>
         {order.map((si, k) => {
@@ -160,7 +186,8 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
           const st = m.stats[si];
           const ar = m.arsenal[si];
           return (
-            <div key={si} className={`seat pos${k}${t.toAct === si && t.handActive ? ' acting' : ''}${s.folded && !s.out ? ' folded' : ''}${s.out ? ' out' : ''}${winners.has(si) ? ' winner' : ''}`}>
+            <div key={si} className={`seat pos${k}${t.toAct === si && t.handActive ? ' acting' : ''}${s.folded && !s.out ? ' folded' : ''}${s.out ? ' out' : ''}${winners.has(si) ? ' winner' : ''}${s.allIn && !s.out && t.handActive ? ' allin-fx' : ''}`}>
+              {t.toAct === si && t.handActive && <i className="turn-ring" aria-hidden="true" />}
               <div className="seat-head">
                 <Portrait seed={rv?.portraitSeed ?? hashString(p.name)} rank={rv?.rank ?? g.player.rank} style={rv?.style ?? 'player'} size={k === 0 ? 44 : 40} />
                 <div className="seat-id">
@@ -213,13 +240,14 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
         </div>
         {ins && (
           <div className="insight">
-            <span>Equity vs random: <b>{pct(ins.equity ?? 0)}</b></span>
+            {ins.equity !== undefined && <span>Equity vs random: <b>{pct(ins.equity)}</b></span>}
             {ins.potOdds ? <span>Pot odds: <b>{pct(ins.potOdds)}</b></span> : null}
             {ins.oracle?.map(o => <span key={o.seat}>vs {t.seats[o.seat].name.split(' ')[0]}: <b>{pct(o.equity)}</b></span>)}
+            {ins.tells?.map(o => <span key={'t' + o.seat}>{t.seats[o.seat].name.split(' ')[0]}: aggr <b>{pct(o.aggr)}</b> · F2R <b>{o.f2r >= 0 ? pct(o.f2r) : '–'}</b> · bluffs <b>{o.bluffs}</b></span>)}
           </div>
         )}
         <div className="hero-row">
-          <div className="hero-hand">{myHand && <span className="made">{myHand}</span>}</div>
+          <div className="hero-hand">{myHand && <><span className="made">{myHand}</span><span className="strength" title="Hand category"><i style={{ width: `${((categoryOf(evaluate([...me.hole, ...t.board])) + 1) / CATEGORY_NAMES.length) * 100}%` }} /></span></>}</div>
           {myTurn ? (
             <div className="actions">
               {L.canFold && <button className="btn fold" onClick={() => doAct('fold')}>Fold <kbd>F</kbd></button>}
@@ -248,6 +276,24 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
       </div>
 
       {flash && <div className={`flash ${flash.kind}`} role="status">{flash.text}</div>}
+      {showHistory && (
+        <div className="history-drawer" role="dialog" aria-label="Hand history">
+          <div className="row"><b>Hand history</b><button className="btn small" onClick={() => { setShowHistory(false); setReplay(null); }}>Close</button></div>
+          {replay ? (() => {
+            const entries = t.log.filter(l => l.hand === replay.hand);
+            return (
+              <div className="replay">
+                <div className="row"><button className="btn small" onClick={() => setReplay(null)}>◀ All hands</button><span>Hand #{replay.hand} · step {replay.i + 1}/{entries.length}</span></div>
+                <ol>{entries.slice(0, replay.i + 1).map((l, i) => <li key={i} className={`lk-${l.kind}`}>{l.text}</li>)}</ol>
+                <div className="row"><button className="btn small" disabled={replay.i <= 0} onClick={() => setReplay({ ...replay, i: replay.i - 1 })}>◀ Prev</button><button className="btn small" disabled={replay.i >= entries.length - 1} onClick={() => setReplay({ ...replay, i: replay.i + 1 })}>Next ▶</button><button className="btn small" onClick={() => setReplay({ ...replay, i: entries.length - 1 })}>End ⏭</button></div>
+              </div>
+            );
+          })() : (
+            <ul>{[...m.history].reverse().slice(0, 15).map(h => <li key={h.hand}><button className="linkish" onClick={() => setReplay({ hand: h.hand, i: 0 })}>#{h.hand}</button> {h.text}</li>)}</ul>
+          )}
+        </div>
+      )}
+      {m.done && m.placementIds[0] === 'player' && !g.settings.reducedMotion && <div className={`victory-fx ${g.player.equipped.victory}`} aria-hidden="true">{Array.from({ length: 36 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 9) * 0.15}s` }} />)}</div>}
 
       {m.done && (
         <Modal>
@@ -286,6 +332,7 @@ export function ReportModal({ r, g, onClose }: { r: MatchReport; g: GameState; o
         <div><span>Ability triggers</span><b>{r.abilityTriggers}</b></div>
       </div>
       {r.trial === 'failed' && <p className="warn">Trial failed — your rank is safe. Regroup and try again.</p>}
+      {r.notes?.map((n, i) => <p key={i} className="gold-text">{n}</p>)}
       <p className="muted">Bankroll now {money(g.player.bankroll)} · Day {g.day}</p>
       <button className="btn big gold" onClick={onClose} autoFocus>Continue</button>
     </Modal>

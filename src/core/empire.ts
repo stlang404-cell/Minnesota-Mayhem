@@ -13,6 +13,7 @@ export const ASSETS: AssetDef[] = [
     levels: [
       { cost: 35000, income: 0, upkeep: 300, effect: 'Exchange research: fair-value model & rival form' },
       { cost: 50000, income: 0, upkeep: 500, effect: 'Also shows the trader order flow by strategy' },
+      { cost: 80000, income: 0, upkeep: 800, effect: 'Head-to-head matchups, model confidence bands, portfolio risk summary' },
     ] },
   { id: 'club', name: 'Card Club of St. Paul', icon: 'club', unlockRank: 2, desc: 'Hosts Club Nights: an arena variant with a 25% richer Senate purse. Earns a little door money.',
     levels: [
@@ -38,6 +39,11 @@ export const ASSETS: AssetDef[] = [
     levels: [
       { cost: 500000, income: 0, upkeep: 2500, effect: '+25% Glory; golden laurel title' },
     ] },
+  { id: 'palace', name: 'Palace of the North Star', icon: 'estate', unlockRank: 3, desc: 'A frost-marble palace. Prestige, +10% Glory, unlocks palace cosmetics and a modest tourist income.',
+    levels: [
+      { cost: 250000, income: 1500, upkeep: 1000, effect: '+10% Glory; +$5/day net; palace wardrobe' },
+      { cost: 350000, income: 2500, upkeep: 1500, effect: 'Grand halls: +$10/day net; marble felt free' },
+    ] },
 ];
 export const ASSET_MAP = Object.fromEntries(ASSETS.map(a => [a.id, a]));
 
@@ -56,7 +62,7 @@ export function totalInvested(levels: Record<string, number>): number {
 }
 export const SELL_REFUND = 0.5;
 
-export interface Cosmetic { id: string; name: string; kind: 'cardback' | 'felt' | 'title'; price: number; unlockRank: number; requires?: string }
+export interface Cosmetic { id: string; name: string; kind: 'cardback' | 'felt' | 'title' | 'frame' | 'banner' | 'victory'; price: number; unlockRank: number; requires?: string }
 export const COSMETICS: Cosmetic[] = [
   { id: 'back_crimson', name: 'Crimson Legion card back', kind: 'cardback', price: 0, unlockRank: 0 },
   { id: 'back_frost', name: 'Frostbitten card back', kind: 'cardback', price: 8000, unlockRank: 1 },
@@ -69,4 +75,16 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'title_wolf', name: 'Title: "Wolf of the North"', kind: 'title', price: 5000, unlockRank: 0 },
   { id: 'title_dictator', name: 'Title: "Dictator Perpetuo"', kind: 'title', price: 50000, unlockRank: 5 },
   { id: 'title_divine', name: 'Title: "Divi Filius"', kind: 'title', price: 100000, unlockRank: 8 },
+  { id: 'frame_bronze', name: 'Bronze portrait frame', kind: 'frame', price: 0, unlockRank: 0 },
+  { id: 'frame_marble', name: 'Marble portrait frame', kind: 'frame', price: 6000, unlockRank: 1 },
+  { id: 'frame_gold', name: 'Gold laurel frame', kind: 'frame', price: 40000, unlockRank: 5 },
+  { id: 'frame_frost', name: 'Frost crystal frame', kind: 'frame', price: 25000, unlockRank: 3, requires: 'palace' },
+  { id: 'banner_crimson', name: 'Crimson arena banners', kind: 'banner', price: 0, unlockRank: 0 },
+  { id: 'banner_purple', name: 'Imperial purple banners', kind: 'banner', price: 15000, unlockRank: 2 },
+  { id: 'banner_gold', name: 'Cloth-of-gold banners', kind: 'banner', price: 45000, unlockRank: 6 },
+  { id: 'banner_aurora', name: 'Aurora banners', kind: 'banner', price: 30000, unlockRank: 4, requires: 'palace' },
+  { id: 'victory_laurels', name: 'Victory: falling laurels', kind: 'victory', price: 0, unlockRank: 0 },
+  { id: 'victory_coins', name: 'Victory: shower of aurei', kind: 'victory', price: 12000, unlockRank: 1 },
+  { id: 'victory_snow', name: 'Victory: Minnesota blizzard', kind: 'victory', price: 12000, unlockRank: 2 },
+  { id: 'victory_fireworks', name: 'Victory: Saturnalia fire', kind: 'victory', price: 35000, unlockRank: 5 },
 ];

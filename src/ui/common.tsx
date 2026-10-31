@@ -1,8 +1,8 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { ABILITY_MAP, ARCHETYPES, ResolvedAbility, resolveAbility, SIGILS, SigilId } from '../core/abilities';
 import { Card, rankOf, suitOf, SUIT_SYMBOLS, RANK_CHARS } from '../core/cards';
-import { RANKS } from '../core/ranks';
-import { portraitURL, spriteURL } from '../art/pixel';
+import { RANKS, division } from '../core/ranks';
+import { insigniaURL, portraitURL, spriteURL } from '../art/pixel';
 
 export const money = (c: number) => (c < 0 ? '−' : '') + '$' + (Math.abs(c) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const money0 = (c: number) => (c < 0 ? '−' : '') + '$' + Math.round(Math.abs(c) / 100).toLocaleString();
@@ -17,9 +17,16 @@ export function Sprite({ kind, name, size = 32, tint }: { kind: 'building' | 'ic
   return <img className="sprite" src={spriteURL(kind, name, tint)} width={size} height={size} alt="" aria-hidden="true" />;
 }
 
-export function RankBadge({ rank, small }: { rank: number; small?: boolean }) {
+export function Insignia({ rank, size = 24 }: { rank: number; size?: number }) {
+  return <img className="insignia" src={insigniaURL(rank)} width={size} height={size} alt={`${RANKS[rank].name} insignia`} />;
+}
+export function RankBadge({ rank, small, rating }: { rank: number; small?: boolean; rating?: number }) {
   const r = RANKS[rank];
-  return <span className={'rank-badge' + (small ? ' small' : '')} style={{ ['--rc' as any]: r.color }}>{r.name}</span>;
+  const div = rating !== undefined ? division(rank, rating) : '';
+  return <span className={'rank-badge' + (small ? ' small' : '')} style={{ ['--rc' as any]: r.color }}><img src={insigniaURL(rank)} alt="" aria-hidden="true" />{r.name}{div && ` ${div}`}</span>;
+}
+export function Framed({ frame, children }: { frame?: string; children: ReactNode }) {
+  return <span className={`frame ${frame ?? 'frame_bronze'}`}>{children}</span>;
 }
 
 export function PlayingCard({ card, hidden, back = 'back_crimson', small, glow, delay = 0 }: { card?: Card; hidden?: boolean; back?: string; small?: boolean; glow?: boolean; delay?: number }) {
