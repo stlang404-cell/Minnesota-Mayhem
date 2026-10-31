@@ -155,6 +155,18 @@ export function ArenaScene({ rank, reduced, height = 150, banner = 'banner_crims
           px(x, '#ff8a2a', tx - 1, 39 - fl, 4, 5 + fl); px(x, '#ffd84a', tx, 41 - fl, 2, 3);
           x.fillStyle = 'rgba(255,170,60,0.10)'; x.beginPath(); x.arc(tx + 1, 42, 14, 0, Math.PI * 2); x.fill();
         }
+        // crowds (Gladiator+): rows of bobbing spectators along the arena edge
+        if (rank >= 2) {
+          const cols = ['#3a2a40', '#4a3020', '#2a3550', '#5a1a20', '#3a4a2a'];
+          for (let row = 0; row < 2; row++) for (let xx = 2 + row * 3; xx < W; xx += 6) {
+            const bob = reduced ? 0 : Math.round(Math.sin(t / 6 + xx * 0.7 + row) * 0.6 + (Math.sin(t / 30) > 0.92 ? -1 : 0));
+            const cy = 58 + row * 3 + bob;
+            if (rank >= 4 && xx > 50 && xx < 142 && row === 0) continue; // keep the hall centre clear
+            px(x, cols[(xx + row) % cols.length], xx, cy, 3, 4); px(x, '#e0b090', xx + 1, cy - 2, 2, 2);
+          }
+        }
+        // warm lighting vignette for torch-lit and golden arenas
+        if (torches || rank >= 6) { const gr = x.createRadialGradient(W / 2, H * 0.55, 10, W / 2, H * 0.55, W * 0.75); gr.addColorStop(0, 'rgba(255,200,120,0.06)'); gr.addColorStop(1, 'rgba(10,0,20,0.35)'); x.fillStyle = gr; x.fillRect(0, 0, W, H); }
         for (const f of flakes) {
           if (!reduced) {
             if (embers) { f.y -= f.s; f.x += Math.sin((t + f.d * 30) / 15) * 0.3; if (f.y < 0) { f.y = H; f.x = (f.x * 7.3 + 31) % W; } }

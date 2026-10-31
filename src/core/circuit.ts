@@ -83,8 +83,9 @@ function schedule(g: GameState, day: number, tier: EventTier, roster?: string[],
       eligibility = 'Last Chance Qualifier: anyone outside the top 16 of the season standings; the champion earns the playoff wildcard';
       playerEligible = !topSeasonIds(g, PLAYOFF_SIZE).includes('player');
     } else {
-      const lo = tier === 'regional' ? Math.max(0, rank - 1) : rank, hi = tier === 'regional' ? Math.min(8, rank + 1) : rank;
+      let lo = tier === 'regional' ? Math.max(0, rank - 1) : rank, hi = tier === 'regional' ? Math.min(8, rank + 1) : rank;
       pool = eligibleRivals(g, lo, hi, entry, busy);
+      if (pool.length < 16) { lo = Math.max(0, lo - 1); hi = Math.min(8, hi + 1); pool = eligibleRivals(g, lo, hi, entry, busy); }
       eligibility = tier === 'highroller' ? `High-Roller Festival: ${RANKS[rank].name}+ with a $${(entry / 100).toFixed(0)} buy-in` : `${tier === 'regional' ? 'Regional' : 'Local'} circuit: ${RANKS[lo].name}${hi !== lo ? `–${RANKS[hi].name}` : ''}`;
       playerEligible = g.player.rank >= lo && g.player.rank <= hi + (tier === 'highroller' ? 8 : 0);
     }
@@ -246,7 +247,8 @@ export function circuitTick(g: GameState) {
 
 function payPlaces(g: GameState, ev: CircuitEvent) {
   const pool = poolOf(ev);
-  const host = (g.empire.venue ?? 0) > 0 && ev.tier !== 'grand' && ev.rank <= (g.empire.venue ?? 0) * 3 ? Math.round(pool * (0.03 + 0.01 * (g.empire.venue ?? 0))) : 0;
+  const vl = g.empire.venue ?? 0;
+  const host = vl > 0 && ev.tier !== 'grand' && (ev.rank < 0 ? vl >= 3 : ev.rank <= vl * 3) ? Math.round(pool * (0.03 + 0.01 * vl) + (g.businessFocus.venue === 'prestige' ? 0 : pool * 0.01)) : 0;
   const net = pool - host;
   ev.hostFee = host;
   const pays: [string, number][] = [];
@@ -260,7 +262,11 @@ function payPlaces(g: GameState, ev: CircuitEvent) {
     if (id === 'player') ledger(g, amt, 'circuit', `${ev.name}: prize`, `evprize:${ev.id}:${i}`);
     else { const r = g.rivals.find(x => x.id === id); if (r) { r.bankroll += amt; r.career.earnings += amt; sponsorShare(g, id, amt, ev.name); } }
   }
-  if (host) ledger(g, host, 'empire', `Hosting fee: ${ev.name} at your Championship Venue`, `host:${ev.id}`);
+  if (host) {
+    const focus = g.businessFocus.venue ?? 'profit';
+    ledger(g, host, 'empire', `Hosting fee: ${ev.name} at your Championship Venue`, `host:${ev.id}`);
+    if (focus === 'prestige') g.player.glory += 150;
+  }
 }
 
 function finishEvent(g: GameState, ev: CircuitEvent) {
@@ -269,7 +275,8 @@ function finishEvent(g: GameState, ev: CircuitEvent) {
   ev.status = 'done';
   const r = g.rivals.find(x => x.id === champ);
   if (r) { r.career.titles++; (r as any).championships = ((r as any).championships ?? 0) + (ev.tier === 'grand' ? 1 : 0); }
-  if (champ === 'player') { g.player.titles++; g.trophies.push({ id: ev.id, name: ev.name, tier: ev.tier, day: g.day, season: ev.season }); }
+  if (champ === 'player') { g.player.titles++; g.trophies.push({ id: ev.id, name: ev.name, tier: ev.tier, day: g.day, season: ev.season }); g.timeline.push({ day: g.day, text: `Won the ${ev.name}`, icon: '🏆' }); }
+  if (ev.roster.includes('player') && ev.tier === 'grand') g.timeline.push({ day: g.day, text: `Played the Season ${ev.season} Imperial Grand Championship`, icon: '🏛' });
   const pts = ev.tier === 'grand' ? [0, 0, 0, 0] : ev.tier === 'local' ? [8, 4, 2, 1] : [16, 8, 4, 2];
   seasonPoints(g, ev.final!.order, [0, 1, 2, 3], 0);
   ev.final!.order.forEach((id, i) => { g.season.points[id] = (g.season.points[id] ?? 0) + pts[i]; });

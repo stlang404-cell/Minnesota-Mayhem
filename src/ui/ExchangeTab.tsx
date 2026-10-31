@@ -6,6 +6,8 @@ import { winProbabilities } from '../core/rivals';
 import { dispatch } from '../store';
 import { sfx } from '../art/sound';
 import { cents, money, Panel, pct, PlayingCard, Portrait, RankBadge, SEAT_COLORS, Sparkline } from './common';
+import { EventMarkets } from './Circuit';
+import { cancelOrder, placeLimit } from '../core/orders';
 
 const short = (n: string) => n.split(' ').slice(0, 2).join(' ');
 const BOOK_COLORS = [['#6fdc8c', '#ff7a6e']];
@@ -13,7 +15,7 @@ const BOOK_COLORS = [['#6fdc8c', '#ff7a6e']];
 export function ExchangeTab({ g, toast }: { g: GameState; toast: (t: string, k?: string) => void }) {
   const [selId, setSelId] = useState(g.markets[0]?.id);
   const [q, setQ] = useState('');
-  const [view, setView] = useState<'markets' | 'portfolio' | 'history'>('markets');
+  const [view, setView] = useState<'markets' | 'tournaments' | 'portfolio' | 'history'>('markets');
   const m = g.markets.find(x => x.id === selId) ?? g.markets[0];
   const lib = g.empire.library ?? 0;
   const live = g.markets.filter(x => x.status === 'open' || x.status === 'live');
@@ -24,7 +26,7 @@ export function ExchangeTab({ g, toast }: { g: GameState; toast: (t: string, k?:
 
   return (
     <div className="tab exchange-tab">
-      <Panel title="The Arena Exchange" right={<div className="seg">{(['markets', 'portfolio', 'history'] as const).map(k => <button key={k} className={view === k ? 'on' : ''} onClick={() => setView(k)}>{{ markets: 'Markets', portfolio: 'Portfolio', history: 'History' }[k]}</button>)}</div>}>
+      <Panel title="The Arena Exchange" right={<div className="seg">{(['markets', 'tournaments', 'portfolio', 'history'] as const).map(k => <button key={k} className={view === k ? 'on' : ''} onClick={() => setView(k)}>{{ markets: 'Matches', tournaments: 'Tournaments', portfolio: 'Portfolio', history: 'History' }[k]}</button>)}</div>}>
         <div className="portfolio">
           <div><span>Open position value</span><b>{money(totalValue)}</b></div>
           <div><span>Unrealized P/L</span><b className={totalValue - totalCost >= 0 ? 'pos' : 'neg'}>{money(totalValue - totalCost)}</b></div>
@@ -37,6 +39,7 @@ export function ExchangeTab({ g, toast }: { g: GameState; toast: (t: string, k?:
 
       {view === 'portfolio' && <PortfolioView g={g} lib={lib} onOpen={id => { setSelId(id); setView('markets'); }} />}
       {view === 'history' && <HistoryView g={g} />}
+      {view === 'tournaments' && <EventMarkets g={g} toast={toast} />}
       {view === 'markets' && (
         <>
           <div className="market-tools">
@@ -109,6 +112,7 @@ function MarketDetail({ g, m, lib, toast }: { g: GameState; m: Market; lib: numb
   const [bi, setBi] = useState(-1);
   const [qty, setQty] = useState(10);
   const [auto, setAuto] = useState<'off' | 'actions' | 'hands'>('off');
+  const [lim, setLim] = useState({ outcome: 0, price: 20 });
   const bk = bookOf(m, bi) ?? bookOf(m, -1);
   const p = marketPrices(bk);
   const fair = bk.kind === 'winner' ? fairEstimate(m) : bookFair(m, bk);
@@ -186,6 +190,19 @@ function MarketDetail({ g, m, lib, toast }: { g: GameState; m: Market; lib: numb
         <input type="number" min={1} max={1000} value={qty} onChange={e => setQty(Math.max(1, Math.min(1000, Math.floor(+e.target.value || 1))))} aria-label="Quantity" />
         <span className="muted">Max per order you can afford on a 30¢ contract: {Math.floor(g.player.bankroll / 31)}</span>
       </div>
+
+      <div className="qty-row limit-row">
+        <span>Limit order:</span>
+        <select value={lim.outcome} onChange={e => setLim({ ...lim, outcome: +e.target.value })} aria-label="Outcome">{bk.labels.map((l, i) => <option key={i} value={i}>{short(l)}</option>)}</select>
+        <input type="number" min={1} max={99} value={lim.price} onChange={e => setLim({ ...lim, price: Math.max(1, Math.min(99, Math.floor(+e.target.value || 1))) })} aria-label="Limit price in cents" />¢
+        <button className="btn small buy" onClick={() => { const e = dispatch(g => placeLimit(g, m.id, bi, lim.outcome, 'buy', lim.price, qty)); if (e) toast(e, 'error'); else { sfx.chip(); toast(`Limit BUY ${qty} @ ${lim.price}¢ placed`); } }}>Limit buy {qty}</button>
+        <button className="btn small sell" onClick={() => { const e = dispatch(g => placeLimit(g, m.id, bi, lim.outcome, 'sell', lim.price, qty)); if (e) toast(e, 'error'); else { sfx.chip(); toast(`Limit SELL ${qty} @ ${lim.price}¢ placed`); } }}>Limit sell {qty}</button>
+        <span className="muted">Buys reserve funds (incl. 2% fee); sells reserve contracts. Fills only between hands, never worse than your limit.</span>
+      </div>
+      {g.orders.filter(o => o.marketId === m.id).length > 0 && (
+        <table className="ladder orders"><thead><tr><th>Order</th><th>Contract</th><th>Limit</th><th>Filled</th><th>Status</th><th></th></tr></thead>
+          <tbody>{g.orders.filter(o => o.marketId === m.id).slice(-8).reverse().map(o => { const b2 = bookOf(m, o.bookIdx); return <tr key={o.id}><td>{o.side.toUpperCase()}</td><td>{bookTitle(b2)}: {short(b2.labels[o.outcome])}</td><td>{Math.round(o.limit * 100)}¢</td><td>{o.filled}/{o.qty}</td><td>{o.status}</td><td>{o.status === 'open' && <button className="btn small" onClick={() => dispatch(g => cancelOrder(g, o.id))}>Cancel</button>}</td></tr>; })}</tbody></table>
+      )}
 
       <div className="outcomes">
         {bk.labels.map((n, i) => {

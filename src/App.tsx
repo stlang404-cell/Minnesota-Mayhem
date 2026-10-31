@@ -4,6 +4,7 @@ import { RANKS } from './core/ranks';
 import { boot, dispatch, importSave, startNew, useGame } from './store';
 import { setSound, setVolume, sfx } from './art/sound';
 import { Ceremony, TutorialCoach } from './ui/Overlays';
+import { playTheme, setMusic } from './art/music';
 import { ArenaScene } from './art/Scene';
 import { ArenaTab, hashName } from './ui/ArenaTab';
 import { ExchangeTab } from './ui/ExchangeTab';
@@ -35,7 +36,10 @@ function Game({ g, warn }: { g: GameState; warn?: string }) {
   const [report, setReport] = useState<MatchReport | null>(null);
   const toasts = useToastQueue();
   const seenNotice = useRef(g.notices[g.notices.length - 1]?.id ?? 0);
-  useEffect(() => { setSound(g.settings.sound); setVolume(g.settings.volume ?? 0.7); }, [g.settings.sound, g.settings.volume]);
+  useEffect(() => { setSound(g.settings.sound); setVolume(g.settings.volume ?? 0.7); setMusic(g.settings.music ?? true, g.settings.volume ?? 0.7); }, [g.settings.sound, g.settings.volume, g.settings.music]);
+  const [gesture, setGesture] = useState(false);
+  useEffect(() => { const f = () => setGesture(true); window.addEventListener('pointerdown', f, { once: true }); return () => window.removeEventListener('pointerdown', f); }, []);
+  useEffect(() => { if (gesture && (g.settings.music ?? true)) playTheme(g.active ? 'arena' : 'menu'); else playTheme('off'); }, [gesture, !!g.active, g.settings.music]);
   useEffect(() => { if (warn) toasts.push(warn, 'warning'); }, []);
   useEffect(() => {
     const fresh = g.notices.filter(n => n.id > seenNotice.current);

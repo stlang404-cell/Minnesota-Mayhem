@@ -605,3 +605,42 @@ select { background: #0e0916; color: var(--ink); border: 0; box-shadow: 0 0 0 2p
   .history-drawer { top: 60px; }
   .seg button { padding: 7px 6px; }
 }
+
+/* ===================== 3.0 THE ETERNAL EMPIRE ===================== */
+img.portrait.anim-idle { animation: idle 3.2s ease-in-out infinite; }
+img.portrait.anim-lean { animation: lean .5s ease-out; }
+img.portrait.anim-slump { filter: saturate(.5) brightness(.85); transform: translateY(2px); transition: all .4s; }
+img.portrait.anim-allin { animation: shakeP .35s ease-in-out infinite; }
+img.portrait.anim-win { animation: jump .6s ease-out 2; box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--gold), 0 0 14px var(--gold); }
+@keyframes idle { 50% { transform: translateY(-1px); } }
+@keyframes lean { 40% { transform: translateX(4px) scale(1.06); } }
+@keyframes shakeP { 25% { transform: translateX(-1px) rotate(-2deg); } 75% { transform: translateX(1px) rotate(2deg); } }
+@keyframes jump { 40% { transform: translateY(-8px) scale(1.1); } }
+.season-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+.season-bar div { background: #150e20; padding: 6px 8px; display: flex; flex-direction: column; box-shadow: 0 0 0 1px #3a2c55; }
+.season-bar span { font: 7px var(--px); color: var(--muted); } .season-bar b { font: 10px var(--px); color: var(--gold); margin-top: 3px; }
+table.circuit td { vertical-align: top; } table.circuit tr { cursor: default; }
+table.circuit tr.tier-grand td { background: linear-gradient(90deg, rgba(242,201,76,.18), transparent); }
+.tier-tag { font: 7px var(--px); padding: 2px 4px; background: #3a2c55; margin-left: 4px; }
+.tier-tag.grand { background: var(--gold); color: #000; } .tier-tag.invitational { background: var(--purple); } .tier-tag.highroller { background: var(--crimson); } .tier-tag.qualifier { background: #1d5a35; }
+.field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; text-align: left; }
+.field-grid div { display: flex; gap: 6px; align-items: center; background: #150e20; padding: 4px; font-size: .8rem; } .field-grid .me { box-shadow: 0 0 0 2px var(--gold); }
+.bracket { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: left; }
+.heat { background: #150e20; padding: 8px; box-shadow: 0 0 0 1px #3a2c55; font-size: .8rem; } .heat ol { padding-left: 18px; margin: 6px 0; } .heat li.me { color: var(--gold); font-weight: 700; }
+.heat.final { box-shadow: 0 0 0 2px var(--gold); background: linear-gradient(#3a2c10, #150e20); }
+.replay-box { text-align: left; background: #0e0916; padding: 10px; margin-top: 10px; box-shadow: 0 0 0 1px var(--gold2); }
+.stackrow { display: grid; grid-template-columns: 160px 1fr 60px; gap: 8px; align-items: center; font-size: .8rem; margin: 3px 0; }
+.highlights { font-size: .76rem; color: var(--muted); padding-left: 16px; }
+.contract { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: .84rem; padding: 4px 0; border-bottom: 1px solid #2a1f40; }
+.trophies { display: flex; gap: 8px; flex-wrap: wrap; }
+.trophy { background: linear-gradient(#3a2c10, #150e20); padding: 8px 10px; display: flex; flex-direction: column; align-items: center; min-width: 120px; box-shadow: 0 0 0 2px var(--gold2); text-align: center; }
+.trophy span { font-size: 26px; } .trophy b { font-family: var(--serif); color: var(--gold); font-size: .8rem; } .trophy small { color: var(--muted); font-size: .7rem; }
+.trophy.t-grand { box-shadow: 0 0 0 2px var(--gold), 0 0 16px rgba(242,201,76,.5); }
+.limit-row input { width: 64px; } table.orders { margin-bottom: 8px; }
+table.champ td { padding: 3px 4px; }
+@media (max-width: 640px) {
+  .season-bar { grid-template-columns: 1fr 1fr; }
+  .bracket { grid-template-columns: 1fr 1fr; }
+  .stackrow { grid-template-columns: 100px 1fr 50px; }
+  table.circuit td:nth-child(3), table.circuit th:nth-child(3) { display: none; }
+}

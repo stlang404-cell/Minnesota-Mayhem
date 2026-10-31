@@ -156,7 +156,7 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
     <div className={`match felt-${g.player.equipped.felt}${m.done && m.placementIds[0] !== 'player' && m.placementIds.indexOf('player') >= 2 ? ' defeat' : ''}`}>
       <div className="match-top">
         <div className="match-info">
-          <b>{a.kind === 'trial' ? `PROMOTION TRIAL → ${RANKS[a.rankAtStart + 1]?.name}` : a.kind === 'arena' ? RANKS[a.rankAtStart].arena : `${MODES[a.kind].icon} ${MODES[a.kind].name}${a.meta?.stage === 'final' ? ' — FINAL TABLE' : a.meta?.stage === 'heat' ? ' — Heat' : a.kind === 'gauntlet' ? ` — Stage ${(a.meta?.stage ?? 0) + 1}` : ''}`}</b>
+          <b>{a.kind === 'circuit' ? `🏟 ${g.circuit.events.find(e => e.id === a.meta?.eventId)?.name ?? 'Imperial Circuit'} — ${a.meta?.stage === 'final' ? 'FINAL TABLE' : 'Heat'}` : a.kind === 'trial' ? `PROMOTION TRIAL → ${RANKS[a.rankAtStart + 1]?.name}` : a.kind === 'arena' ? RANKS[a.rankAtStart].arena : `${MODES[a.kind].icon} ${MODES[a.kind].name}${a.meta?.stage === 'final' ? ' — FINAL TABLE' : a.meta?.stage === 'heat' ? ' — Heat' : a.kind === 'gauntlet' ? ` — Stage ${(a.meta?.stage ?? 0) + 1}` : ''}`}</b>
           <span>Hand {t.handNo} · Blinds {t.level.sb}/{t.level.bb}{t.level.ante ? ` · ante ${t.level.ante}` : ''} · next {nextLv.sb}/{nextLv.bb} in {nextLevelIn}</span>
         </div>
         <div className="speed" role="group" aria-label="Speed">
@@ -185,11 +185,15 @@ export function MatchView({ g, onReport }: { g: GameState; onReport: (r: MatchRe
           const reveal = isHuman || showdownSeats.includes(si);
           const st = m.stats[si];
           const ar = m.arsenal[si];
+          const la = lastAction(si);
+          const showdownLoss = !t.handActive && showdownSeats.includes(si) && !winners.has(si);
+          const mood = winners.has(si) ? 'smile' : s.out ? 'frown' : showdownLoss ? 'frown' : s.allIn ? 'shock' : /raises|bets/.test(la) ? 'smirk' : /folds/.test(la) ? 'frown' : 'neutral';
+          const anim = winners.has(si) ? 'win' : s.allIn && t.handActive ? 'allin' : /raises|bets/.test(la) ? 'lean' : /folds/.test(la) ? 'slump' : 'idle';
           return (
             <div key={si} className={`seat pos${k}${t.toAct === si && t.handActive ? ' acting' : ''}${s.folded && !s.out ? ' folded' : ''}${s.out ? ' out' : ''}${winners.has(si) ? ' winner' : ''}${s.allIn && !s.out && t.handActive ? ' allin-fx' : ''}`}>
               {t.toAct === si && t.handActive && <i className="turn-ring" aria-hidden="true" />}
               <div className="seat-head">
-                <Portrait seed={rv?.portraitSeed ?? hashString(p.name)} rank={rv?.rank ?? g.player.rank} style={rv?.style ?? 'player'} size={k === 0 ? 44 : 40} />
+                <Portrait seed={rv?.portraitSeed ?? hashString(p.name)} rank={rv?.rank ?? g.player.rank} style={rv?.style ?? 'player'} size={k === 0 ? 44 : 40} mood={mood as any} anim={g.settings.reducedMotion ? undefined : anim} outfit={isHuman ? g.player.equipped.outfit : undefined} headgear={isHuman ? g.player.equipped.headgear : undefined} />
                 <div className="seat-id">
                   <div className="seat-name">{p.name}{t.dealer === si && <span className="dbtn">D</span>}</div>
                   <div className="seat-stack">{s.out ? 'ELIMINATED' : s.stack.toLocaleString()}</div>

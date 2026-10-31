@@ -2,15 +2,15 @@ import { ReactNode, useEffect, useState } from 'react';
 import { ABILITY_MAP, ARCHETYPES, ResolvedAbility, resolveAbility, SIGILS, SigilId } from '../core/abilities';
 import { Card, rankOf, suitOf, SUIT_SYMBOLS, RANK_CHARS } from '../core/cards';
 import { RANKS, division } from '../core/ranks';
-import { insigniaURL, portraitURL, spriteURL } from '../art/pixel';
+import { insigniaURL, portraitURL, spriteURL, Mood } from '../art/pixel';
 
 export const money = (c: number) => (c < 0 ? '−' : '') + '$' + (Math.abs(c) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const money0 = (c: number) => (c < 0 ? '−' : '') + '$' + Math.round(Math.abs(c) / 100).toLocaleString();
 export const pct = (p: number, d = 0) => (p * 100).toFixed(d) + '%';
 export const cents = (p: number) => Math.round(p * 100) + '¢';
 
-export function Portrait({ seed, rank, style, size = 48, title }: { seed: number; rank: number; style: string; size?: number; title?: string }) {
-  return <img className="portrait" src={portraitURL(seed, rank, style)} width={size} height={size} alt={title ?? 'portrait'} title={title} />;
+export function Portrait({ seed, rank, style, size = 48, title, mood, outfit, headgear, anim }: { seed: number; rank: number; style: string; size?: number; title?: string; mood?: Mood; outfit?: string; headgear?: string; anim?: string }) {
+  return <img className={`portrait${anim ? ' anim-' + anim : ''}`} src={portraitURL(seed, rank, style, { mood, outfit, headgear })} width={size} height={size} alt={title ?? 'portrait'} title={title} />;
 }
 
 export function Sprite({ kind, name, size = 32, tint }: { kind: 'building' | 'icon'; name: string; size?: number; tint?: string }) {

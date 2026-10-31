@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { GameState, newGame } from './core/game';
+import { ensureCalendar } from './core/circuit';
 import { loadGame, saveGame, deserialize, serialize } from './core/save';
 
 type Listener = () => void;
@@ -37,7 +38,7 @@ export async function persist() {
 export async function boot(): Promise<string | undefined> {
   try {
     const { game, warning } = await loadGame();
-    if (game) { state = game; emit(); }
+    if (game) { ensureCalendar(game); state = game; emit(); }
     return warning;
   } catch (e) {
     return 'Storage unavailable: ' + (e as Error).message + '. Progress may not persist in this browser mode.';
@@ -52,6 +53,7 @@ export function startNew(name: string, seed?: number) {
 
 export function importSave(text: string) {
   const g = deserialize(text);
+  ensureCalendar(g);
   state = g; emit(); void persist();
 }
 export function exportSave(): string { return state ? serialize(state) : ''; }

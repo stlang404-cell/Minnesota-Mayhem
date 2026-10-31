@@ -3,24 +3,26 @@ import { GameState, TUTORIAL, tutorialEvent } from '../core/game';
 import { RANKS } from '../core/ranks';
 import { ArenaScene } from '../art/Scene';
 import { sfx } from '../art/sound';
+import { fanfare } from '../art/music';
 import { dispatch } from '../store';
 import { Insignia } from './common';
 
 /** Full-screen promotion ceremony: the new arena, its insignia and what it unlocks. */
 export function Ceremony({ g }: { g: GameState }) {
-  const rank = g.ceremony!;
-  const r = RANKS[rank];
-  useEffect(() => { sfx.promote(); }, []);
+  const grand = g.ceremony === 100;
+  const rank = grand ? 8 : g.ceremony!;
+  const r = grand ? { ...RANKS[8], name: 'Imperial Grand Champion', motto: 'The whole Empire chants your name.', arena: 'Hall of Champions', unlock: 'A trophy, the Champion’s golden wreath and eternal glory' } : RANKS[rank];
+  useEffect(() => { sfx.promote(); fanfare(); }, []);
   return (
     <div className="ceremony" role="dialog" aria-modal="true" aria-label={`Promoted to ${r.name}`}>
       <ArenaScene rank={rank} reduced={g.settings.reducedMotion} height={300} banner={g.player.equipped.banner} />
       <div className="ceremony-card">
         <div className="laurel-burst" aria-hidden="true" />
         <Insignia rank={rank} size={96} />
-        <p className="ceremony-kicker">BY DECREE OF THE SENATE</p>
+        <p className="ceremony-kicker">{grand ? 'THE SEASON IS YOURS' : 'BY DECREE OF THE SENATE'}</p>
         <h1>{r.name.toUpperCase()}</h1>
         <p className="ceremony-motto">“{r.motto}”</p>
-        <div className="ceremony-unlocks"><b>New arena:</b> {r.arena}<br /><b>Unlocked:</b> {r.unlock}<br /><b>Entry:</b> ${(r.entry / 100).toFixed(0)} · AI skill tier {Math.round(r.aiSkill * 100)}</div>
+        <div className="ceremony-unlocks">{grand ? <><b>Honour:</b> {r.unlock}</> : <><b>New arena:</b> {r.arena}<br /><b>Unlocked:</b> {r.unlock}<br /><b>Entry:</b> ${(r.entry / 100).toFixed(0)} · AI skill tier {Math.round(r.aiSkill * 100)}</>}</div>
         <button className="btn big gold" autoFocus onClick={() => dispatch(g => { g.ceremony = null; })}>Enter the {r.arena}</button>
       </div>
     </div>

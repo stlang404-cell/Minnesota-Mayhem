@@ -43,9 +43,16 @@ const BGS: Record<string, string> = {
   economy: '#1d4a2b', comeback: '#4a1030', information: '#124a48', player: '#2b1d4a',
 };
 
-/** Procedural 16×16 Roman portrait, deterministic from seed. */
-export function portraitURL(seed: number, rank: number, style: string): string {
-  const key = `p:${seed}:${rank}:${style}`;
+export type Mood = 'neutral' | 'smile' | 'frown' | 'shock' | 'smirk';
+export interface PortraitOpts { mood?: Mood; outfit?: string; headgear?: string }
+const OUTFITS: Record<string, [string, string]> = {
+  outfit_tunic: ['#8b6b4a', '#5a4430'], outfit_crimson: ['#b0262d', '#f2c94c'], outfit_purple: ['#5a2382', '#f2c94c'],
+  outfit_armor: ['#a9a3ad', '#6b6570'], outfit_fur: ['#7a5a3a', '#e8e0d0'],
+};
+/** Procedural 16×16 Roman portrait, deterministic from seed; expressions and cosmetics are overlays. */
+export function portraitURL(seed: number, rank: number, style: string, opts: PortraitOpts = {}): string {
+  const mood = opts.mood ?? 'neutral';
+  const key = `p:${seed}:${rank}:${style}:${mood}:${opts.outfit ?? ''}:${opts.headgear ?? ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const rng = new Rng(seed);
@@ -62,7 +69,7 @@ export function portraitURL(seed: number, rank: number, style: string): string {
   const beard = rng.chance(0.45);
   const wide = rng.chance(0.5) ? 1 : 0;
   // shoulders / toga
-  const toga = TOGA[rank] ?? '#888', trim = TRIM[rank] ?? '#aaa';
+  const [toga, trim] = opts.outfit && OUTFITS[opts.outfit] ? OUTFITS[opts.outfit] : [TOGA[rank] ?? '#888', TRIM[rank] ?? '#aaa'];
   rect(2, 13, 12, 3, toga);
   rect(1, 14, 14, 2, toga);
   rect(9, 13, 1, 3, trim); rect(10, 12, 1, 1, trim);
@@ -78,10 +85,20 @@ export function portraitURL(seed: number, rank: number, style: string): string {
   rect(6, 6, 2, 1, hair); rect(9, 6, 2, 1, hair);
   // nose & mouth
   px(8, 8, shade); px(8, 9, shade);
-  rect(7, 10, 3, 1, rng.chance(0.5) ? '#8a3a3a' : '#a04848');
+  const lip = rng.chance(0.5) ? '#8a3a3a' : '#a04848';
+  if (mood === 'smile') { px(6, 9, lip); rect(7, 10, 3, 1, lip); px(10, 9, lip); }
+  else if (mood === 'frown') { px(6, 11, lip); rect(7, 10, 3, 1, lip); px(10, 11, lip); rect(6, 6, 2, 1, '#1a1020'); rect(9, 6, 2, 1, '#1a1020'); }
+  else if (mood === 'shock') { rect(7, 9, 3, 2, '#3a1010'); px(6, 7, '#fff'); px(10, 7, '#fff'); }
+  else if (mood === 'smirk') { rect(7, 10, 3, 1, lip); px(10, 9, lip); px(9, 6, hair); px(10, 5, hair); }
+  else rect(7, 10, 3, 1, lip);
   if (beard) { rect(5 - wide, 9, 1, 3, hair); rect(11 + wide, 9, 1, 3, hair); rect(6, 11, 5, 1, hair); px(6, 10, hair); px(10, 10, hair); }
-  // headwear by rank
-  if (rank <= 1) {
+  // headwear: explicit cosmetic overrides rank default
+  const hg = opts.headgear;
+  if (hg && hg !== 'head_none') {
+    if (hg === 'head_galea') { rect(4, 2, 8, 3, '#b8b8c0'); rect(3, 4, 2, 5, '#b8b8c0'); rect(11, 4, 2, 5, '#b8b8c0'); rect(5, 0, 6, 2, '#c0262d'); }
+    else if (hg === 'head_crown') { rect(4, 2, 8, 2, '#f2c94c'); px(4, 1, '#f2c94c'); px(7, 0, '#f2c94c'); px(8, 0, '#f2c94c'); px(11, 1, '#f2c94c'); px(6, 2, '#c0262d'); px(9, 2, '#3d6fb6'); }
+    else { const leaf = hg === 'head_champion' ? '#f2c94c' : '#4f9e4f'; rect(4, 3, 8, 2, hair); for (let i = 3; i <= 12; i += 2) { px(i, 3, leaf); px(i + 1, 2, leaf); } }
+  } else if (rank <= 1) {
     // hood / hair with snow
     if (rank === 0) { rect(3, 2, 10, 3, '#6b4a2e'); rect(3, 4, 2, 7, '#6b4a2e'); rect(11, 4, 2, 7, '#6b4a2e'); rect(4, 2, 8, 1, '#fff'); px(3, 3, '#fff'); }
     else { rect(4, 3, 8, 2, hair); rect(4, 4, 1, 3, hair); rect(11, 4, 1, 3, hair); }

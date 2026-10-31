@@ -41,7 +41,7 @@ export interface PlayerState {
   loadout: string[];
   presets: { name: string; uids: string[] }[];
   cosmetics: string[];
-  equipped: { cardback: string; felt: string; title: string; frame: string; banner: string; victory: string };
+  equipped: { cardback: string; felt: string; title: string; frame: string; banner: string; victory: string; outfit?: string; headgear?: string };
   uidCounter: number;
   bankruptcies: number;
   // ---- v4 ----
@@ -87,7 +87,7 @@ export interface GameState {
   counter: number;
   marketCounter: number;
   matchCounter: number;
-  settings: { sound: boolean; reducedMotion: boolean; speed: number; autoSave: boolean; volume: number };
+  settings: { sound: boolean; reducedMotion: boolean; speed: number; autoSave: boolean; volume: number; music?: boolean };
   stats: { exchangeTrades: number; exchangePnl: number; marketsSettled: number; bestStreak: number; streak: number; earnedPrizes: number; propertyIncome: number };
   // ---- v4: Imperial Ascension ----
   reputation: Record<string, PublicStats>;
@@ -181,6 +181,7 @@ export function newGame(name: string, seed = Date.now() >>> 0): GameState {
   for (const id of STARTER_ABILITIES) grantAbility(g, id);
   g.player.loadout = g.player.owned.map(o => o.uid);
   ensureMarkets(g);
+  ensureCalendar(g);
   notify(g, 'info', `Welcome, ${g.player.name}. The frozen arenas of Minnesota await.`);
   return g;
 }
@@ -896,7 +897,8 @@ export function buyCosmetic(g: GameState, id: string): string | null {
   const c = COSMETICS.find(x => x.id === id); if (!c) return 'Unknown';
   if (g.player.cosmetics.includes(id)) return 'Owned';
   if (g.player.rank < c.unlockRank && g.player.prestige === 0) return `Requires ${RANKS[c.unlockRank].name}`;
-  if (c.requires && !(g.empire[c.requires] > 0)) return `Requires ${ASSET_MAP[c.requires].name}`;
+  if (c.requires === 'trophy') { if (!g.trophies?.length) return 'Earned by winning an Imperial Circuit event'; }
+  else if (c.requires && !(g.empire[c.requires] > 0)) return `Requires ${ASSET_MAP[c.requires].name}`;
   if (!ledger(g, -c.price, 'cosmetic', `Bought ${c.name}`)) return 'Not enough Dollars';
   g.player.cosmetics.push(id);
   equipCosmetic(g, id);
@@ -974,6 +976,13 @@ export const ACHIEVEMENTS: { id: string; name: string; desc: string; test: (g: G
   { id: 'daily', name: 'Daily Devotion', desc: 'Win a Daily Challenge.', test: g => g.daily?.best === 0 },
   { id: 'season', name: 'Season Contender', desc: 'Finish a season in the top 10.', test: g => g.hall.some(h => h.playerPlace > 0 && h.playerPlace <= 10) },
   { id: 'palace', name: 'Palace of the North Star', desc: 'Own the Palace.', test: g => (g.empire.palace ?? 0) > 0 },
+  { id: 'circuit_win', name: 'Circuit Champion', desc: 'Win an Imperial Circuit event.', test: g => (g.trophies?.length ?? 0) >= 1 },
+  { id: 'grand_champ', name: 'Imperial Grand Champion', desc: 'Win a seasonal Imperial Grand Championship.', test: g => (g.trophies ?? []).some(t => t.tier === 'grand') },
+  { id: 'playoffs', name: 'Postseason', desc: 'Qualify for the seasonal playoffs.', test: g => (g.circuit?.events ?? []).some(e => e.tier === 'grand' && e.roster.includes('player')) || (g.circuit?.history ?? []).some(h => h.tier === 'grand' && h.playerResult > 0) },
+  { id: 'patron', name: 'Patron of the Arena', desc: 'Sponsor a rival.', test: g => (g.sponsorships?.length ?? 0) >= 1 },
+  { id: 'limit', name: 'Patient Trader', desc: 'Have a limit order filled.', test: g => (g.orders ?? []).some(o => o.filled > 0) },
+  { id: 'venue', name: 'Impresario', desc: 'Earn a hosting fee at your Championship Venue.', test: g => (g.ledgerTotals?.empire ?? 0) !== 0 && (g.ledger ?? []).some(l => l.reason.startsWith('Hosting fee')) },
+  { id: 'magnate3', name: 'Imperial Magnate', desc: 'Reach $25,000 net worth.', test: g => netWorth(g) >= 2_500_000 },
   { id: 'first_blood', name: 'First Blood', desc: 'Win an arena match.', test: g => g.player.wins >= 1 },
   { id: 'veteran', name: 'Veteran', desc: 'Play 25 matches.', test: g => g.player.matches >= 25 },
   { id: 'promoted', name: 'Rising Star', desc: 'Pass a promotion trial.', test: g => g.player.trialsPassed >= 1 },

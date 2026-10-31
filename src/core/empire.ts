@@ -39,6 +39,12 @@ export const ASSETS: AssetDef[] = [
     levels: [
       { cost: 500000, income: 0, upkeep: 2500, effect: '+25% Glory; golden laurel title' },
     ] },
+  { id: 'venue', name: 'Championship Venue', icon: 'arena', unlockRank: 2, desc: 'Host Imperial Circuit events. Earns a hosting fee from the pool of every circuit event at or below your venue’s tier (Grand Championship excluded). Focus: Profit (+1% fee) or Prestige (+Glory per hosted event).',
+    levels: [
+      { cost: 120000, income: 0, upkeep: 600, effect: 'Hosts local events (ranks ≤ 3): 4% hosting fee' },
+      { cost: 200000, income: 0, upkeep: 1000, effect: 'Hosts regional events (ranks ≤ 6): 5% fee' },
+      { cost: 320000, income: 0, upkeep: 1600, effect: 'Hosts every circuit event: 6% fee' },
+    ] },
   { id: 'palace', name: 'Palace of the North Star', icon: 'estate', unlockRank: 3, desc: 'A frost-marble palace. Prestige, +10% Glory, unlocks palace cosmetics and a modest tourist income.',
     levels: [
       { cost: 250000, income: 1500, upkeep: 1000, effect: '+10% Glory; +$5/day net; palace wardrobe' },
@@ -62,7 +68,7 @@ export function totalInvested(levels: Record<string, number>): number {
 }
 export const SELL_REFUND = 0.5;
 
-export interface Cosmetic { id: string; name: string; kind: 'cardback' | 'felt' | 'title' | 'frame' | 'banner' | 'victory'; price: number; unlockRank: number; requires?: string }
+export interface Cosmetic { id: string; name: string; kind: 'cardback' | 'felt' | 'title' | 'frame' | 'banner' | 'victory' | 'outfit' | 'headgear'; price: number; unlockRank: number; requires?: string }
 export const COSMETICS: Cosmetic[] = [
   { id: 'back_crimson', name: 'Crimson Legion card back', kind: 'cardback', price: 0, unlockRank: 0 },
   { id: 'back_frost', name: 'Frostbitten card back', kind: 'cardback', price: 8000, unlockRank: 1 },
@@ -87,4 +93,14 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'victory_coins', name: 'Victory: shower of aurei', kind: 'victory', price: 12000, unlockRank: 1 },
   { id: 'victory_snow', name: 'Victory: Minnesota blizzard', kind: 'victory', price: 12000, unlockRank: 2 },
   { id: 'victory_fireworks', name: 'Victory: Saturnalia fire', kind: 'victory', price: 35000, unlockRank: 5 },
+  { id: 'outfit_tunic', name: 'Woollen tunic', kind: 'outfit', price: 0, unlockRank: 0 },
+  { id: 'outfit_crimson', name: 'Crimson toga', kind: 'outfit', price: 9000, unlockRank: 1 },
+  { id: 'outfit_purple', name: 'Toga picta (imperial purple)', kind: 'outfit', price: 40000, unlockRank: 5 },
+  { id: 'outfit_armor', name: 'Legate’s lorica armour', kind: 'outfit', price: 30000, unlockRank: 3 },
+  { id: 'outfit_fur', name: 'Northern fur mantle', kind: 'outfit', price: 15000, unlockRank: 2 },
+  { id: 'head_none', name: 'Bare head', kind: 'headgear', price: 0, unlockRank: 0 },
+  { id: 'head_laurel', name: 'Laurel wreath', kind: 'headgear', price: 20000, unlockRank: 4 },
+  { id: 'head_galea', name: 'Crested galea helmet', kind: 'headgear', price: 18000, unlockRank: 2 },
+  { id: 'head_crown', name: 'Imperial crown', kind: 'headgear', price: 90000, unlockRank: 7 },
+  { id: 'head_champion', name: 'Champion’s golden wreath (earned: win a circuit event)', kind: 'headgear', price: 0, unlockRank: 0, requires: 'trophy' },
 ];

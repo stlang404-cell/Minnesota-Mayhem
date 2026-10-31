@@ -57,6 +57,7 @@ const MIGRATIONS: Record<number, (d: any) => any> = {
     if (d.active?.match) for (const st of d.active.match.stats ?? []) { st.bigBets ??= 0; st.bigBetsStrong ??= 0; st.smallBets ??= 0; st.smallBetsStrong ??= 0; }
     for (const mk of d.markets ?? []) if (mk.match) for (const st of mk.match.stats ?? []) { st.bigBets ??= 0; st.bigBetsStrong ??= 0; st.smallBets ??= 0; st.smallBetsStrong ??= 0; }
     d.timeline.push({ day: d.day, text: 'Your house enters the age of the Eternal Empire (save upgraded to 3.0)', icon: '🏛' });
+    d.settings = { music: true, ...d.settings };
     d.migratedFrom ??= 4;
     d.version = 5;
     return d;

@@ -6,6 +6,7 @@ import { dispatch, exportSave, importSave, closeGame, persist } from '../store';
 import { wipeSave } from '../core/save';
 import { setSound, setVolume, sfx } from '../art/sound';
 import { money, Panel, Sprite } from './common';
+import { DynastyPanel, LegacyPanel } from './Circuit';
 
 export function EmpireTab({ g, toast }: { g: GameState; toast: (t: string, k?: string) => void }) {
   const p = g.player;
@@ -68,11 +69,13 @@ export function EmpireTab({ g, toast }: { g: GameState; toast: (t: string, k?: s
         })}
       </div>
 
+      <DynastyPanel g={g} toast={toast} />
+      <LegacyPanel g={g} />
       <div className="grid2">
         <Panel title="Imperial Wardrobe">
           <div className="cosmetics">
             {COSMETICS.map((c, idx) => {
-              const header = idx === 0 || COSMETICS[idx - 1].kind !== c.kind ? <h4 key={'h' + c.kind}>{{ cardback: 'Card backs', felt: 'Table felts', title: 'Titles', frame: 'Portrait frames', banner: 'Arena banners', victory: 'Victory effects' }[c.kind]}</h4> : null;
+              const header = idx === 0 || COSMETICS[idx - 1].kind !== c.kind ? <h4 key={'h' + c.kind}>{({ cardback: 'Card backs', felt: 'Table felts', title: 'Titles', frame: 'Portrait frames', banner: 'Arena banners', victory: 'Victory effects', outfit: 'Roman outfits', headgear: 'Crowns, wreaths & helmets' } as Record<string, string>)[c.kind]}</h4> : null;
               const own = p.cosmetics.includes(c.id);
               const eq = (p.equipped as any)[c.kind] === c.id;
               return (<Fragment key={c.id}>{header}
@@ -101,6 +104,7 @@ export function EmpireTab({ g, toast }: { g: GameState; toast: (t: string, k?: s
         </Panel>
         <Panel title="Settings & Saves">
           <label className="check"><input type="checkbox" checked={g.settings.sound} onChange={e => { dispatch(g => { g.settings.sound = e.target.checked; }); setSound(e.target.checked); }} /> Sound effects</label>
+          <label className="check"><input type="checkbox" checked={g.settings.music ?? true} onChange={e => dispatch(g => { g.settings.music = e.target.checked; })} /> Music (original procedural soundtrack)</label>
           <label className="check">Volume <input type="range" min={0} max={1} step={0.05} value={g.settings.volume ?? 0.7} onChange={e => { const v = +e.target.value; dispatch(g => { g.settings.volume = v; }); setVolume(v); sfx.chip(); }} aria-label="Volume" /></label>
           <label className="check">Default match speed <select value={g.settings.speed} onChange={e => dispatch(g => { g.settings.speed = +e.target.value; })}><option value={1}>1×</option><option value={2}>2×</option><option value={3}>4×</option></select></label>
           <label className="check"><input type="checkbox" checked={!(g.tutorial?.done)} onChange={e => dispatch(g => { g.tutorial = { step: e.target.checked ? 0 : 99, done: !e.target.checked }; })} /> Show tutorial</label>

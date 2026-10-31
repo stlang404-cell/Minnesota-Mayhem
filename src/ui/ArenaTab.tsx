@@ -10,6 +10,7 @@ import { sfx } from '../art/sound';
 import { AbilityIcon, AbilityTooltip, Bar, Framed, Insignia, Modal, money, Panel, pct, Portrait, RankBadge } from './common';
 import { hashString } from '../core/rng';
 import { COSMETICS } from '../core/empire';
+import { CircuitPanel } from './Circuit';
 
 export const hashName = (n: string) => hashString(n);
 const titleOf = (id: string) => COSMETICS.find(c => c.id === id)?.name.replace(/^Title: "|"$/g, '') ?? '';
@@ -81,6 +82,8 @@ export function ArenaTab({ g, toast }: { g: GameState; toast: (t: string, k?: st
         <div className="prize-line">{chosen.kind === 'gauntlet' ? 'Cash-out ladder:' : chosen.kind === 'tournament' ? 'Final table:' : 'Prizes:'} {chosen.prizes.filter(x => x > 0).map((x, i) => <span key={i}>{chosen.kind === 'gauntlet' ? `S${i + 1}` : ordinal(i + 1)} {money(x)}</span>)}</div>
       </div>
 
+      <CircuitPanel g={g} toast={toast} />
+
       {p.matches >= 1 && (
         <Panel title="Game Modes" right={<span className="muted">{modes.filter(m => m.unlocked).length}/{modes.length} unlocked</span>}>
           <div className="modes-grid">
@@ -99,7 +102,7 @@ export function ArenaTab({ g, toast }: { g: GameState; toast: (t: string, k?: st
       <div className="grid2">
         <Panel title="Your Career">
           <div className="career">
-            <Framed frame={p.equipped.frame}><Portrait seed={hashName(p.name)} rank={p.rank} style="player" size={64} /></Framed>
+            <Framed frame={p.equipped.frame}><Portrait seed={hashName(p.name)} rank={p.rank} style="player" size={64} outfit={p.equipped.outfit} headgear={p.equipped.headgear} anim="idle" /></Framed>
             <div>
               <div className="cname">{p.name} {p.equipped.title && <em>“{titleOf(p.equipped.title)}”</em>}</div>
               <RankBadge rank={p.rank} rating={p.rating} /> {p.prestige > 0 && <span className="laurel">✦ Ascension {p.prestige}</span>}
