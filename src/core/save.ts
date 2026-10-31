@@ -1,4 +1,4 @@
-import { GameState, SAVE_VERSION } from './game';
+import { GameState, SAVE_VERSION, v4PlayerDefaults, v4WorldDefaults } from './game';
 import { hashString } from './rng';
 
 export interface SaveEnvelope { format: 'minnesota-mayhem-save'; version: number; savedAt: number; checksum: string; data: GameState }
@@ -24,6 +24,27 @@ export class SaveError extends Error {}
 const MIGRATIONS: Record<number, (d: any) => any> = {
   1: d => { d.archive = d.archive ?? []; d.version = 2; return d; },
   2: d => { d.stats = { exchangeTrades: 0, exchangePnl: 0, marketsSettled: 0, bestStreak: 0, streak: 0, earnedPrizes: 0, propertyIncome: 0, ...(d.stats ?? {}) }; d.version = 3; return d; },
+  // v3 (Version 1.0) → v4 (Imperial Ascension). Everything existing is preserved; new systems get defaults.
+  3: d => {
+    const w = v4WorldDefaults(d.day ?? 1);
+    for (const [k, v] of Object.entries(w)) if (d[k] === undefined) d[k] = v;
+    d.player = { ...v4PlayerDefaults(), ...d.player };
+    d.player.career.hands = d.player.career.hands || 0;
+    d.settings = { volume: 0.7, ...d.settings };
+    // existing players have already learned the basics
+    d.tutorial = { step: 99, done: (d.player.matches ?? 0) > 0 };
+    if (d.active) {
+      const k = d.active.kind;
+      d.active.ratingScale ??= k === 'recovery' ? 0 : 1;
+      d.active.gloryScale ??= k === 'recovery' ? 0 : 1;
+    }
+    const fixMatch = (m: any) => { if (!m) return; for (const a of m.arsenal ?? []) a.x ??= {}; };
+    fixMatch(d.active?.match);
+    for (const mk of d.markets ?? []) { fixMatch(mk.match); mk.extra ??= []; mk.kind ??= 'winner'; mk.labels ??= mk.names; mk.rule ??= 'Pays $1 if this competitor wins the match.'; }
+    d.migratedFrom = 3;
+    d.version = 4;
+    return d;
+  },
 };
 
 export function migrate(d: any): GameState {
@@ -104,6 +125,11 @@ export async function saveGame(g: GameState): Promise<void> {
   try { localStorage.setItem('mm-backup', text); } catch { /* quota: IndexedDB copy still exists */ }
 }
 
+/** Version of a serialized save without migrating it (null if unreadable). */
+export function peekVersion(text: string): number | null {
+  try { const v = JSON.parse(text.slice(0, text.indexOf(',"data":')) + '}').version; return typeof v === 'number' ? v : null; } catch { return null; }
+}
+
 export async function loadGame(): Promise<{ game: GameState | null; warning?: string }> {
   const ptr = await idbGet('pointer');
   const order = ptr === 'A' ? ['slotA', 'slotB'] : ['slotB', 'slotA'];
@@ -111,7 +137,14 @@ export async function loadGame(): Promise<{ game: GameState | null; warning?: st
   for (const k of order) {
     const t = await idbGet(k);
     if (!t) continue;
-    try { return { game: deserialize(t), warning }; }
+    const v = peekVersion(t);
+    // keep an untouched copy of any older-version save before migrating it
+    if (v !== null && v < SAVE_VERSION && !(await idbGet(`backup-v${v}`))) await idbPut(`backup-v${v}`, t);
+    try {
+      const game = deserialize(t);
+      if (v !== null && v < SAVE_VERSION) warning = `Save upgraded from version ${v} to ${SAVE_VERSION}. A backup of the original was kept.`;
+      return { game, warning };
+    }
     catch (e) { warning = `Primary save unreadable (${(e as Error).message}); restored the previous save.`; }
   }
   try {

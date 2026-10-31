@@ -1,5 +1,5 @@
 import { cost, initialQ, prices, sharesToPrice, tradeCost } from './lmsr';
-import { createMatch, MatchState, runHand } from './match';
+import { beginHand, createMatch, MatchState, runHand, step } from './match';
 import { Rival, winProbabilities } from './rivals';
 import { mix, Rng } from './rng';
 
@@ -11,12 +11,32 @@ export interface TradeRecord { t: number; who: string; outcome: number; shares: 
 export interface PricePoint { t: number; hand: number; p: number[] }
 
 export interface TraderBot {
-  id: string; name: string; strategy: 'fundamental' | 'momentum' | 'contrarian' | 'noise' | 'whale';
+  id: string; name: string; strategy: 'fundamental' | 'momentum' | 'contrarian' | 'noise' | 'whale' | 'conservative' | 'speculative' | 'informed';
   bias: number[]; budget: number /* dollars */; shares: number[]; spent: number; aggressiveness: number;
+  books?: Record<string, number[]>;  // holdings per book kind
+  pnl?: number;                       // cents, realised at settlement
 }
+
+/** A contract book: one LMSR over mutually exclusive outcomes with a precise resolution rule. */
+export interface Book {
+  kind: 'winner' | 'first_out' | 'long_match';
+  title: string;
+  rule: string;
+  labels: string[];
+  b: number; q: number[]; q0: number[]; prior: number[];
+  history: PricePoint[]; trades: TradeRecord[]; player: Position; mmCash: number;
+  result: number;          // -1 until known
+  lockedAt?: number;       // hand number at which the outcome became known (trading locked)
+}
+
+export const LONG_LINE = 40.5;
 
 export interface Market {
   id: string;
+  kind: 'winner';
+  rule: string;
+  labels: string[];
+  extra: Book[];
   title: string;
   rivalIds: string[];
   names: string[];
@@ -49,7 +69,7 @@ export function createMarket(id: string, rivals: Rival[], rank: number, seed: nu
   const prior = winProbabilities(rivals);
   const b = 120;
   const q0 = initialQ(prior, b);
-  const strategies: TraderBot['strategy'][] = ['fundamental', 'fundamental', 'fundamental', 'momentum', 'momentum', 'contrarian', 'contrarian', 'noise', 'noise', 'whale'];
+  const strategies: TraderBot['strategy'][] = ['fundamental', 'fundamental', 'informed', 'momentum', 'momentum', 'contrarian', 'conservative', 'speculative', 'noise', 'whale'];
   const bots: TraderBot[] = strategies.map((s, k) => ({
     id: `${id}b${k}`, name: ['Mercator', 'Argentarius', 'Negotiator', 'Spectator', 'Fortuna', 'Haruspex', 'Publicanus', 'Tabellarius', 'Lanista', 'Patronus'][k],
     strategy: s, bias: rivals.map(() => (rng.next() - 0.5) * (s === 'noise' ? 0.5 : 0.25)),
@@ -57,19 +77,37 @@ export function createMarket(id: string, rivals: Rival[], rank: number, seed: nu
   }));
   return {
     id, title: `${RANK_TITLE(rank)} #${id.slice(1)}`,
+    kind: 'winner', rule: 'Pays $1 if this competitor wins the match (last player with chips; documented hand-cap rule ranks by chips).', labels: rivals.map(r => r.name),
     rivalIds: rivals.map(r => r.id), names: rivals.map(r => r.name), rank, b, q: q0.slice(), q0, status: 'open', prior,
     history: [{ t: 0, hand: 0, p: prices(q0, b) }], trades: [], bots, player: emptyPosition(), match: null, matchSeed: mix(seed, 'match'),
     result: -1, placements: [], mmCash: 0, tick: 0, createdDay: day, settledKeys: [],
+    extra: [makeBook('first_out', 'First Elimination', 'Pays $1 if this competitor is the first player eliminated (ties on the same hand: the smaller starting stack that hand is first, per tournament rules).', rivals.map(r => r.name), firstOutPrior(prior)),
+            makeBook('long_match', `Long Match (${LONG_LINE} hands)`, `OVER pays $1 if the match is still running when hand ${Math.ceil(LONG_LINE)} is dealt; UNDER pays $1 if a champion is decided before then.`, ['Over', 'Under'], [0.5, 0.5])],
   };
 }
+
+function makeBook(kind: Book['kind'], title: string, rule: string, labels: string[], prior: number[]): Book {
+  const b = kind === 'long_match' ? 80 : 100;
+  const q0 = initialQ(prior, b);
+  return { kind, title, rule, labels, b, q: q0.slice(), q0, prior, history: [{ t: 0, hand: 0, p: prices(q0, b) }], trades: [], player: emptyPosition(labels.length), mmCash: 0, result: -1 };
+}
+function firstOutPrior(winP: number[]): number[] {
+  const inv = winP.map(p => 1 / Math.sqrt(p));
+  const s = inv.reduce((a, b) => a + b, 0);
+  return inv.map(x => x / s);
+}
+/** The winner book is the market object itself; extra books by index. */
+export const bookTitle = (bk: Book) => (bk.kind === 'winner' ? 'Match Winner' : bk.title);
+export function bookOf(m: Market, idx = -1): Book { return idx < 0 ? (m as unknown as Book) : m.extra[idx]; }
+export function allBooks(m: Market): Book[] { return [m as unknown as Book, ...(m.extra ?? [])]; }
 const RANK_TITLE = (r: number) => ['Snowfield Bout', 'Tavern Clash', 'Ludus Duel', 'Legion Contest', 'Praetorian Trial', 'Consular Games', 'Imperial Games', 'Caesarean Games', 'Divine Games'][r] ?? 'Exhibition';
 
-export function marketPrices(m: Market): number[] { return prices(m.q, m.b); }
+export function marketPrices(m: Market | Book): number[] { return prices(m.q, m.b); }
 
 export interface Quote { shares: number; cents: number; fee: number; total: number; avgPrice: number; newPrice: number }
 
 /** Executable quote: buys round cost UP to the cent, sells round proceeds DOWN (house-favouring). */
-export function quote(m: Market, outcome: number, shares: number): Quote {
+export function quote(m: Market | Book, outcome: number, shares: number): Quote {
   const raw = tradeCost(m.q, m.b, outcome, shares);
   const cents = shares >= 0 ? Math.ceil(raw * 100 - 1e-9) : Math.floor(raw * 100 + 1e-9);
   const fee = Math.ceil(Math.abs(cents) * FEE_RATE);
@@ -78,48 +116,84 @@ export function quote(m: Market, outcome: number, shares: number): Quote {
   return { shares, cents, fee, total, avgPrice: shares ? Math.abs(cents) / Math.abs(shares) / 100 : 0, newPrice: prices(q2, m.b)[outcome] };
 }
 
-export function tradingOpen(m: Market): boolean {
-  return (m.status === 'open' || m.status === 'live') && !(m.match?.done) && !(m.match?.table.handActive);
+export function tradingOpen(m: Market, book?: Book): boolean {
+  return (m.status === 'open' || m.status === 'live') && !(m.match?.done) && !(m.match?.table.handActive) && !(book && book.lockedAt !== undefined);
 }
 
 export interface TradeResult { ok: boolean; error?: string; cashDelta: number /* cents, negative = paid */; fee: number }
 
 /** Player trade. `cashAvailable` in cents. Shares are whole contracts. */
-export function playerTrade(m: Market, outcome: number, shares: number, cashAvailable: number): TradeResult {
-  if (!tradingOpen(m)) return { ok: false, error: 'Trading is locked', cashDelta: 0, fee: 0 };
+export function playerTrade(m: Market, outcome: number, shares: number, cashAvailable: number, bookIdx = -1): TradeResult {
+  const bk = bookOf(m, bookIdx);
+  if (!bk) return { ok: false, error: 'No such contract', cashDelta: 0, fee: 0 };
+  if (!tradingOpen(m, bk)) return { ok: false, error: 'Trading is locked', cashDelta: 0, fee: 0 };
   if (!Number.isInteger(shares) || shares === 0) return { ok: false, error: 'Whole contracts only', cashDelta: 0, fee: 0 };
-  if (outcome < 0 || outcome >= m.q.length) return { ok: false, error: 'Bad outcome', cashDelta: 0, fee: 0 };
-  const pos = m.player;
+  if (outcome < 0 || outcome >= bk.q.length) return { ok: false, error: 'Bad outcome', cashDelta: 0, fee: 0 };
+  const pos = bk.player;
   if (shares < 0 && -shares > pos.shares[outcome]) return { ok: false, error: 'Cannot sell more contracts than you own (no naked shorts)', cashDelta: 0, fee: 0 };
-  const qt = quote(m, outcome, shares);
-  const price = marketPrices(m)[outcome];
+  const qt = quote(bk, outcome, shares);
+  const price = marketPrices(bk)[outcome];
+  const hand = m.match?.table.handNo ?? 0;
   if (shares > 0) {
     const pay = qt.cents + qt.fee;
     if (pay > cashAvailable) return { ok: false, error: 'Insufficient Dollars', cashDelta: 0, fee: 0 };
     pos.shares[outcome] += shares; pos.cost[outcome] += qt.cents; pos.fees += qt.fee;
-    m.q[outcome] += shares; m.mmCash += qt.cents / 100;
-    m.trades.push({ t: ++m.tick, who: 'You', outcome, shares, cents: qt.cents, fee: qt.fee, price, hand: m.match?.table.handNo ?? 0 });
-    snapshot(m);
+    bk.q[outcome] += shares; bk.mmCash += qt.cents / 100;
+    bk.trades.push({ t: ++m.tick, who: 'You', outcome, shares, cents: qt.cents, fee: qt.fee, price, hand });
+    snapshot(m, bk);
     return { ok: true, cashDelta: -pay, fee: qt.fee };
-  } else {
-    const n = -shares;
-    const proceeds = -qt.cents; // positive cents
-    const receive = Math.max(0, proceeds - qt.fee);
-    const avg = pos.cost[outcome] / pos.shares[outcome];
-    const basis = Math.round(avg * n);
-    pos.realized += receive - basis;
-    pos.cost[outcome] -= basis; pos.shares[outcome] -= n; pos.fees += qt.fee;
-    if (pos.shares[outcome] === 0) pos.cost[outcome] = 0;
-    m.q[outcome] -= n; m.mmCash -= proceeds / 100;
-    m.trades.push({ t: ++m.tick, who: 'You', outcome, shares, cents: qt.cents, fee: qt.fee, price, hand: m.match?.table.handNo ?? 0 });
-    snapshot(m);
-    return { ok: true, cashDelta: receive, fee: qt.fee };
   }
+  const n = -shares;
+  const proceeds = -qt.cents;
+  const receive = Math.max(0, proceeds - qt.fee);
+  const basis = Math.round((pos.cost[outcome] / pos.shares[outcome]) * n);
+  pos.realized += receive - basis;
+  pos.cost[outcome] -= basis; pos.shares[outcome] -= n; pos.fees += qt.fee;
+  if (pos.shares[outcome] === 0) pos.cost[outcome] = 0;
+  bk.q[outcome] -= n; bk.mmCash -= proceeds / 100;
+  bk.trades.push({ t: ++m.tick, who: 'You', outcome, shares, cents: qt.cents, fee: qt.fee, price, hand });
+  snapshot(m, bk);
+  return { ok: true, cashDelta: receive, fee: qt.fee };
 }
 
-function snapshot(m: Market) {
-  m.history.push({ t: m.tick, hand: m.match?.table.handNo ?? 0, p: marketPrices(m) });
-  if (m.history.length > 400) m.history.splice(1, m.history.length - 400);
+function snapshot(m: Market, bk: Book = m as unknown as Book) {
+  bk.history.push({ t: m.tick, hand: m.match?.table.handNo ?? 0, p: marketPrices(bk) });
+  if (bk.history.length > 400) bk.history.splice(1, bk.history.length - 400);
+  if (bk.trades.length > 300) bk.trades.splice(0, bk.trades.length - 300);
+}
+
+/** Public-information fair value for an extra book. */
+export function bookFair(m: Market, bk: Book): number[] {
+  if (bk.result >= 0) return bk.labels.map((_, i) => (i === bk.result ? 1 : 0));
+  const t = m.match?.table;
+  if (bk.kind === 'first_out') {
+    if (!t || t.handNo === 0) return bk.prior.slice();
+    const tot = t.seats.reduce((s, x) => s + x.stack + x.totalIn, 0);
+    const raw = t.seats.map((s, i) => (s.out ? 0 : Math.pow(tot / Math.max(1, s.stack + s.totalIn), 1.3) * Math.sqrt(bk.prior[i] * 4)));
+    const sum = raw.reduce((a, b) => a + b, 0) || 1;
+    return raw.map(x => x / sum);
+  }
+  // long match: expected remaining hands grows with players left and the evenness of stacks
+  if (!t || t.handNo === 0) return bk.prior.slice();
+  const left = t.seats.filter(s => !s.out).length;
+  const expectRemaining = Math.max(0, (left - 1) * 9 * Math.pow(0.85, Math.max(0, t.levelIndex - 4)));
+  const z = (t.handNo + expectRemaining - LONG_LINE) / 7;
+  const pOver = 1 / (1 + Math.exp(-z));
+  return [pOver, 1 - pOver];
+}
+
+/** Lock extra books whose outcome has become known (between hands). */
+export function lockResolvedBooks(m: Market) {
+  const t = m.match?.table;
+  if (!t) return;
+  for (const bk of m.extra ?? []) {
+    if (bk.lockedAt !== undefined) continue;
+    if (bk.kind === 'first_out' && t.eliminated.length > 0) { bk.result = t.eliminated[0]; bk.lockedAt = t.handNo; }
+    if (bk.kind === 'long_match') {
+      if (!t.finished && t.handNo >= Math.ceil(LONG_LINE) - 1 && !t.handActive) { bk.result = 0; bk.lockedAt = t.handNo; }
+      else if (t.finished) { bk.result = t.handNo >= Math.ceil(LONG_LINE) ? 0 : 1; bk.lockedAt = t.handNo; }
+    }
+  }
 }
 
 /** Probability model from PUBLIC state: prior skill blended with chip shares; eliminated = 0. */
@@ -135,60 +209,68 @@ export function fairEstimate(m: Market): number[] {
 /** Simulated traders react to public information and trade through the LMSR (never moving prices directly). */
 export function botsTrade(m: Market, rounds = 1) {
   if (!tradingOpen(m)) return;
-  const fair = fairEstimate(m);
-  const rng = new Rng(mix(m.matchSeed, 'bots', m.tick, m.match?.table.handNo ?? 0));
+  botsTradeBook(m, m as unknown as Book, fairEstimate(m), rounds);
+  for (const bk of m.extra ?? []) if (bk.lockedAt === undefined) botsTradeBook(m, bk, bookFair(m, bk), rounds);
+}
+
+function botsTradeBook(m: Market, B: Book, fair: number[], rounds: number) {
+  const nOut = B.q.length;
+  const rng = new Rng(mix(m.matchSeed, 'bots', m.tick, m.match?.table.handNo ?? 0, B.kind));
   for (let r = 0; r < rounds; r++) {
     for (const bot of rng.shuffle([...m.bots])) {
-      if (!rng.chance(bot.aggressiveness)) continue;
-      const p = marketPrices(m);
-      const last = m.history.length > 3 ? m.history[m.history.length - 4].p : p;
+      if (!rng.chance(bot.aggressiveness * (B.kind === 'winner' ? 1 : 0.6))) continue;
+      const hold = (bot.books ??= {})[B.kind] ??= Array(nOut).fill(0);
+      const p = marketPrices(B);
+      const last = B.history.length > 3 ? B.history[B.history.length - 4].p : p;
       const belief = fair.map((f, i) => {
         if (fair[i] === 0) return 0;
+        if (bot.strategy === 'informed') return Math.max(0.005, f); // reads the public model exactly
         switch (bot.strategy) {
           case 'momentum': return Math.max(0.005, p[i] + (p[i] - last[i]) * 1.5);
           case 'contrarian': return Math.max(0.005, p[i] - (p[i] - last[i]) * 1.0 + (f - p[i]) * 0.3);
           case 'noise': return Math.max(0.005, p[i] * (1 + (rng.next() - 0.5) * 0.4));
-          default: return Math.max(0.005, f * (1 + bot.bias[i]));
+          default: return Math.max(0.005, f * (1 + (bot.bias[i] ?? 0) * (bot.strategy === 'conservative' ? 0.3 : 1)));
         }
       });
       const bs = belief.reduce((a, b) => a + b, 0) || 1;
       const nb = belief.map(x => x / bs);
       // pick the most mispriced outcome from this bot's view
       let best = 0, edge = -1;
-      for (let i = 0; i < 4; i++) { const e = Math.abs(nb[i] - p[i]); if (e > edge) { edge = e; best = i; } }
-      if (edge < 0.025) continue;
+      for (let i = 0; i < nOut; i++) { const e = Math.abs(nb[i] - p[i]); if (e > edge) { edge = e; best = i; } }
+      const minEdge = bot.strategy === 'conservative' ? 0.06 : bot.strategy === 'speculative' ? 0.015 : 0.025;
+      if (edge < minEdge) continue;
       const wantUp = nb[best] > p[best];
-      const target = p[best] + (nb[best] - p[best]) * 0.5;
-      let sh = Math.round(sharesToPrice(m.q, m.b, best, target));
+      const target = p[best] + (nb[best] - p[best]) * (bot.strategy === 'speculative' ? 0.8 : 0.5);
+      let sh = Math.round(sharesToPrice(B.q, B.b, best, target));
       if (!wantUp) {
-        sh = Math.max(sh, -bot.shares[best]);
+        sh = Math.max(sh, -hold[best]);
         if (sh >= 0) continue;
       } else {
         const remaining = bot.budget - bot.spent;
         if (remaining <= 1) continue;
-        while (sh > 0 && tradeCost(m.q, m.b, best, sh) > remaining) sh = Math.floor(sh / 2);
-        sh = Math.min(sh, 60);
+        while (sh > 0 && tradeCost(B.q, B.b, best, sh) > remaining) sh = Math.floor(sh / 2);
+        sh = Math.min(sh, bot.strategy === 'conservative' ? 20 : 60);
         if (sh <= 0) continue;
       }
-      const c = tradeCost(m.q, m.b, best, sh);
+      const c = tradeCost(B.q, B.b, best, sh);
       const cents = sh > 0 ? Math.ceil(c * 100) : Math.floor(c * 100);
       const fee = Math.ceil(Math.abs(cents) * FEE_RATE);
-      bot.shares[best] += sh;
+      hold[best] += sh;
       bot.spent += cents / 100 + fee / 100;
-      m.q[best] += sh; m.mmCash += cents / 100;
+      bot.pnl = (bot.pnl ?? 0) - cents - fee;
+      B.q[best] += sh; B.mmCash += cents / 100;
       m.tick++;
-      m.trades.push({ t: m.tick, who: bot.name, outcome: best, shares: sh, cents, fee, price: p[best], hand: m.match?.table.handNo ?? 0 });
-      if (m.trades.length > 300) m.trades.splice(0, m.trades.length - 300);
-      snapshot(m);
+      B.trades.push({ t: m.tick, who: bot.name, outcome: best, shares: sh, cents, fee, price: p[best], hand: m.match?.table.handNo ?? 0 });
+      snapshot(m, B);
     }
   }
 }
 
 /** Start the canonical AI-only match backing this market. */
-export function goLive(m: Market, rivals: Rival[], cfgIters = 70) {
+export function goLive(m: Market, rivals: Rival[], cfgIters = 70, reputation?: (id: string) => any) {
   if (m.status !== 'open') return;
   const rs = m.rivalIds.map(id => rivals.find(r => r.id === id)!);
-  m.match = createMatch(rs.map(r => ({ id: r.id, name: r.name, isHuman: false, loadout: r.loadout, profile: r.profile })), m.matchSeed, 'exhibition', undefined, m.id + 'x');
+  m.match = createMatch(rs.map(r => ({ id: r.id, name: r.name, isHuman: false, loadout: r.loadout, profile: r.profile, reputation: reputation?.(r.id) })), m.matchSeed, 'exhibition', undefined, m.id + 'x');
   m.match.aiIters = cfgIters;
   m.status = 'live';
 }
@@ -197,9 +279,24 @@ export function goLive(m: Market, rivals: Rival[], cfgIters = 70) {
 export function advanceHand(m: Market): boolean {
   if (m.status !== 'live' || !m.match) return false;
   runHand(m.match);
+  lockResolvedBooks(m);
   if (!m.match.done) botsTrade(m, 1);
   else snapshot(m);
   return m.match.done;
+}
+
+/** Spectator: advance a single decision (or deal the next hand). Trading stays locked mid-hand. */
+export function advanceAction(m: Market): { done: boolean; handEnded: boolean } {
+  if (m.status !== 'live' || !m.match) return { done: false, handEnded: false };
+  const mt = m.match;
+  if (!mt.table.handActive) { beginHand(mt); if (mt.table.handActive) return { done: false, handEnded: false }; }
+  else step(mt);
+  if (!mt.table.handActive) {
+    lockResolvedBooks(m);
+    if (!mt.done) botsTrade(m, 1); else snapshot(m);
+    return { done: mt.done, handEnded: true };
+  }
+  return { done: false, handEnded: false };
 }
 
 export interface Settlement { payout: number; key: string; already: boolean }
@@ -212,12 +309,19 @@ export function settle(m: Market): Settlement {
   const winnerId = m.match.placementIds[0];
   m.result = m.rivalIds.indexOf(winnerId);
   m.placements = m.rivalIds.map(id => m.match!.placementIds.indexOf(id));
-  const pos = m.player;
-  const payout = pos.shares[m.result] * 100;
-  const basis = pos.cost.reduce((a, b) => a + b, 0);
-  pos.realized += payout - basis;
-  m.mmCash -= m.q[m.result] - m.q0[m.result]; // pays $1 per outstanding winning share issued by this market
-  pos.shares = [0, 0, 0, 0]; pos.cost = [0, 0, 0, 0];
+  lockResolvedBooks(m);
+  let payout = 0;
+  for (const bk of allBooks(m)) {
+    if (bk !== (m as unknown as Book) && bk.result < 0) continue;
+    const res = bk === (m as unknown as Book) ? m.result : bk.result;
+    const pos = bk.player;
+    const pay = pos.shares[res] * 100;
+    payout += pay;
+    pos.realized += pay - pos.cost.reduce((a, b) => a + b, 0);
+    bk.mmCash -= bk.q[res] - bk.q0[res]; // pays $1 per outstanding winning share
+    pos.shares = pos.shares.map(() => 0); pos.cost = pos.cost.map(() => 0);
+    for (const bot of m.bots) { const h = bot.books?.[bk.kind] ?? (bk.kind === 'winner' ? bot.shares : undefined); if (h) bot.pnl = (bot.pnl ?? 0) + (h[res] ?? 0) * 100; }
+  }
   m.status = 'settled';
   m.settledKeys.push(key);
   return { payout, key, already: false };
@@ -226,19 +330,22 @@ export function settle(m: Market): Settlement {
 /** Cancel a market (e.g. withdrawal before the match). Refunds the cost basis of open positions. */
 export function cancel(m: Market, reason: string): number {
   if (m.status === 'settled' || m.status === 'cancelled') return 0;
-  const refund = m.player.cost.reduce((a, b) => a + b, 0);
-  m.player.shares = [0, 0, 0, 0]; m.player.cost = [0, 0, 0, 0];
+  let refund = 0;
+  for (const bk of allBooks(m)) { refund += bk.player.cost.reduce((a, b) => a + b, 0); bk.player.shares = bk.player.shares.map(() => 0); bk.player.cost = bk.player.cost.map(() => 0); }
   m.status = 'cancelled'; m.cancelReason = reason; m.refunded = refund;
   m.settledKeys.push(`cancel:${m.id}`);
   return refund;
 }
 
-export function positionValue(m: Market): number {
-  const p = marketPrices(m);
-  return m.player.shares.reduce((s, sh, i) => s + sh * p[i] * 100, 0);
+export function bookValue(bk: Book): number {
+  const p = bk.result >= 0 ? bk.labels.map((_, i) => (i === bk.result ? 1 : 0)) : marketPrices(bk);
+  return bk.player.shares.reduce((s, sh, i) => s + sh * p[i] * 100, 0);
 }
-export function unrealized(m: Market): number { return positionValue(m) - m.player.cost.reduce((a, b) => a + b, 0); }
+export function positionValue(m: Market): number { return allBooks(m).reduce((s, bk) => s + bookValue(bk), 0); }
+export function positionCost(m: Market): number { return allBooks(m).reduce((s, bk) => s + bk.player.cost.reduce((a, b) => a + b, 0), 0); }
+export function unrealized(m: Market): number { return positionValue(m) - positionCost(m); }
+export function realizedTotal(m: Market): number { return allBooks(m).reduce((s, bk) => s + bk.player.realized, 0); }
 
 /** Market maker's worst-case loss bound (dollars). */
-export function mmLossBound(m: Market): number { return m.b * Math.log(1 / Math.min(...m.prior)); }
+export function mmLossBound(m: Market | Book): number { return m.b * Math.log(1 / Math.min(...m.prior)); }
 export { cost };

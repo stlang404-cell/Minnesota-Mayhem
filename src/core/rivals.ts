@@ -84,7 +84,7 @@ export function makeRival(rng: Rng, idx: number, rank: number, used: Set<string>
   };
 }
 
-export function makePopulation(rng: Rng, perRank = 6): Rival[] {
+export function makePopulation(rng: Rng, perRank = 13): Rival[] {
   const used = new Set<string>();
   const out: Rival[] = [];
   let idx = 0;
@@ -137,7 +137,7 @@ export function recordRivalResult(rivals: Rival[], ids: string[], placement: num
     if (placement[i] <= 1) r.career.top2++;
     const prize = prizes[placement[i]] ?? 0;
     r.career.earnings += prize - entry;
-    r.bankroll = Math.max(entry * 3, r.bankroll + prize - entry);
+    r.bankroll = Math.max(0, r.bankroll + prize - entry);
     r.rating = Math.max(RANKS[r.rank].threshold - 80, r.rating + d[i]);
     r.form.push(placement[i]); if (r.form.length > 10) r.form.shift();
     const winnerIdx = placement.indexOf(0);
@@ -150,7 +150,8 @@ export function recordRivalResult(rivals: Rival[], ids: string[], placement: num
 }
 
 /** Rivals promote/demote and slowly develop their Arsenal. */
-export function evolveRivals(rivals: Rival[], rng: Rng) {
+export function evolveRivals(rivals: Rival[], rng: Rng): { id: string; name: string; rank: number; up: boolean }[] {
+  const events: { id: string; name: string; rank: number; up: boolean }[] = [];
   for (const r of rivals) {
     const next = RANKS[r.rank + 1];
     if (next && r.rating >= next.threshold + 25) {
@@ -158,9 +159,11 @@ export function evolveRivals(rivals: Rival[], rng: Rng) {
       r.career.trialWins++;
       r.profile.skill = Math.min(0.97, Math.max(r.profile.skill, RANKS[r.rank].aiSkill - 0.03));
       r.loadout = makeLoadout(r.style, r.rank, rng);
+      events.push({ id: r.id, name: r.name, rank: r.rank, up: true });
     } else if (r.rank > 0 && r.rating < RANKS[r.rank].threshold - 70) {
       r.rank--;
       r.profile.skill = Math.max(0.15, r.profile.skill - 0.04);
+      events.push({ id: r.id, name: r.name, rank: r.rank, up: false });
     }
     // experience: tiny skill growth, bounded by rank ceiling
     if (r.career.matches % 10 === 9) r.profile.skill = Math.min(RANKS[r.rank].aiSkill + 0.05, r.profile.skill + 0.01);
@@ -170,14 +173,17 @@ export function evolveRivals(rivals: Rival[], rng: Rng) {
       if (up) { up.level++; r.bankroll -= RANKS[r.rank].entry * 5; }
     }
   }
+  return events;
 }
 
 /** Keep each rank populated so the player always finds opponents. */
-export function rebalancePopulation(rivals: Rival[], rng: Rng) {
+export function rebalancePopulation(rivals: Rival[], rng: Rng, target = 12, maxNew = 3) {
   const used = new Set(rivals.map(r => r.name));
+  let added = 0;
   RANKS.forEach((_, rank) => {
     const n = rivals.filter(r => r.rank === rank).length;
-    for (let k = n; k < 4; k++) {
+    const want = n < 4 ? 4 : target;
+    for (let k = n; k < want && (n + (k - n) < 4 || added < maxNew); k++, added++) {
       const idx = rivals.reduce((m, r) => Math.max(m, parseInt(r.id.slice(1), 10)), 0) + 1;
       rivals.push(makeRival(rng, idx, rank, used));
     }
