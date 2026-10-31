@@ -69,6 +69,7 @@ export function onAct(m: MatchState, seat: number, kind: string, street: Street,
   tr.checkStreet ??= []; tr.checkRaise ??= []; tr.threeBet ??= []; tr.calledPre ??= []; tr.foldsTo ??= []; tr.hunter ??= [];
   if (kind === 'check') tr.checkStreet[seat] = street;
   if ((kind === 'raise' || kind === 'bet') && tr.checkStreet[seat] === street) tr.checkRaise[seat] = true;
+  if ((kind === 'raise' || kind === 'bet') && street !== 'preflop') { const bs = ((tr.betStreets ??= [])[seat] ??= []); if (!bs.includes(street)) bs.push(street); }
   if (kind === 'raise' && street === 'preflop' && info.betBefore > m.table.level.bb) tr.threeBet[seat] = true;
   if (kind === 'call' && street === 'preflop') tr.calledPre[seat] = true;
   if (kind === 'fold' && street !== 'preflop' && info.facing && info.aggressorBefore >= 0) tr.foldsTo[info.aggressorBefore] = (tr.foldsTo[info.aggressorBefore] ?? 0) + 1;
@@ -112,6 +113,7 @@ export function armRules(m: MatchState, seat: number, ab: ResolvedAbility): { de
   if (id === 'mask_of_janus' && hasSyn(m, seat, 'imperial_conspiracy')) delta -= 1;
   if (id === 'thunder_of_jupiter' && hasSyn(m, seat, 'senate_collapse')) delta -= 2;
   if (id === 'tell_reader' && hasSyn(m, seat, 'night_watch')) delta -= 9;
+  if (id === 'golden_conspiracy' && hasSyn(m, seat, 'golden_cabal')) delta -= 1;
   const bbs = (t.seats[seat].stack + t.seats[seat].committed) / t.level.bb;
   if (id === 'final_table_nerves' && live(m).length > 3) return { delta, reason: 'Only with 3 or fewer players' };
   if (id === 'desperate_gambit' && bbs >= 6) return { delta, reason: 'Only below 6 BB' };
@@ -239,6 +241,8 @@ export function matchStart(m: MatchState, seat: number) {
   if (hasSyn(m, seat, 'caesars_ascension')) A.resolve = Math.min(10, A.resolve + 1);
   const bi = has(m, seat, 'bankroll_insurance'); if (bi) A.x.insurancePct = bi.value;
   const ol = has(m, seat, 'oracles_ledger'); if (ol) A.rebatePct = Math.max(A.rebatePct, ol.value);
+  if (hasSyn(m, seat, 'legions_vow')) A.wardsLeft += 2;
+  if (hasSyn(m, seat, 'frozen_throne')) A.wardsLeft += 1;
 }
 
 /** Extra uses granted by combos. */

@@ -8,6 +8,7 @@ import {
 } from './poker';
 import { mix, Rng } from './rng';
 import * as X2 from './arsenal2';
+import * as X3 from './arsenal3';
 
 export interface LoadoutEntry { defId: string; level: number; sigil?: SigilId }
 
@@ -252,6 +253,7 @@ export function beginHand(m: MatchState) {
   }
   m.track = freshTrack(n);
   X2.blindsPosted(m);
+  X3.runRules(m, 'handStart', { effects: [], bb: t.level.bb });
   m.track.chipLeader = leader;
   m.track.levelIndex = t.levelIndex;
   for (const i of live) m.stats[i].hands++;
@@ -521,6 +523,7 @@ function endOfHand(m: MatchState) {
   }
   const ctx: X2.EndCtx = { r, bb, net, won, sdLosers, bigWinner, postFolders, effects };
   for (let o = 0; o < n; o++) if (dealtIn[o]) X2.handEnd(m, o, ctx);
+  X3.runRules(m, 'win', { end: ctx, effects, bb });
   resolveEffects(m, effects, bb, net, r.contrib);
   // post-resolution: phoenix
   for (let o = 0; o < n; o++) {
@@ -536,6 +539,8 @@ function endOfHand(m: MatchState) {
   for (const b of busted) {
     emit(m, b, 'elim', `${t.seats[b].name} is eliminated`);
     X2.onElimination(m, b, bigWinner);
+    if (bigWinner !== b && !t.seats[bigWinner].out) X3.runRules(m, 'elimination', { effects: [], bb }, bigWinner);
+    X3.runRules(m, 'survive', { effects: [], bb });
     const live = liveSeats(t);
     if (live.length > 1) {
       const shortest = live.reduce((a, c) => t.seats[c].stack < t.seats[a].stack ? c : a);
@@ -623,6 +628,12 @@ function aiArm(m: MatchState, seat: number, view: AIView, eq: number, action: Ac
       case 'charge_of_equites': want = aggressive && eq * (live + 1) > 1.4; break;
       case 'desperate_gambit': want = aggressive || action.type === 'call'; break;
       case 'final_table_nerves': want = m.arsenal[seat].resolve >= 4; break;
+      case 'mirage': case 'ambush': want = aggressive && view.street !== 'preflop'; break;
+      case 'press_the_line': want = aggressive && view.street === 'river' && eq > 0.6; break;
+      case 'riposte': want = aggressive && eq > 0.6; break;
+      case 'golden_conspiracy': want = action.type === 'allin' || (action.type === 'call' && view.legal.toCall >= view.stack); break;
+      case 'underworld_pact': want = action.type === 'allin'; break;
+      case 'senate_manipulator': want = live >= 2 && eq * (live + 1) > 1.3; break;
       default: want = false;
     }
     if (want && rng.chance(0.85)) {

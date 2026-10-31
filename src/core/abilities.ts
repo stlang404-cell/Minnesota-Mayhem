@@ -300,6 +300,8 @@ export const ABILITIES: AbilityDef[] = [
     counter: 'End it early.', fusion: ['cartographer', 'merchants_ledger'], price: 15000, unlockRank: 4 },
 ];
 
+import { RULE_ABILITIES, COMBOS3 } from './abilities3';
+ABILITIES.push(...(RULE_ABILITIES as AbilityDef[]));
 export const ABILITY_MAP: Record<string, AbilityDef> = Object.fromEntries(ABILITIES.map(a => [a.id, a]));
 
 export type SigilId = 'haste' | 'might' | 'endurance' | 'thrift';
@@ -356,7 +358,8 @@ export const SYNERGIES: { id: string; name: string; needs: string[]; desc: strin
   { id: 'senate_collapse', name: 'Senate Collapse', needs: ['thunder_of_jupiter', 'senate_whisper', 'caesars_gambit'], desc: 'Thunder of Jupiter costs 1 Resolve; Senate Whisper triggers when any single opponent folds to you after the flop.' },
   { id: 'caesars_ascension', name: "Caesar's Ascension", needs: ['@two_legendaries'], desc: 'Equip any two legendary fusions: +1 starting Resolve and every tribute you collect gains +0.25 BB (caps still apply).' },
 ];
-export const COMBO_IDS = ['imperial_conspiracy', 'golden_legion', 'frozen_empire', 'senate_collapse', 'caesars_ascension'];
+SYNERGIES.push(...COMBOS3);
+export const COMBO_IDS = ['imperial_conspiracy', 'golden_legion', 'frozen_empire', 'senate_collapse', 'caesars_ascension', ...COMBOS3.map(c => c.id)];
 
 export function activeSynergies(defIds: string[]): typeof SYNERGIES {
   const set = new Set(defIds);
