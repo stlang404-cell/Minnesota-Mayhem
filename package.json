@@ -1,0 +1,32 @@
+{
+  "name": "minnesota-mayhem",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Minnesota Mayhem - a Roman-themed poker strategy empire game. Fully local, offline-capable.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && node scripts/build-sw.mjs",
+    "serve": "node server.mjs",
+    "test": "vitest run",
+    "test:e2e": "node scripts/e2e-playthrough.mjs",
+    "balance": "vite-node scripts/balance.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/cinzel": "^5.3.0",
+    "@fontsource/press-start-2p": "^5.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "fake-indexeddb": "^6.2.7",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vite-node": "^6.0.0",
+    "vitest": "^5.0.5"
+  }
+}

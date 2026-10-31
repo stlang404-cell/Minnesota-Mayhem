@@ -1,0 +1,127 @@
+import { GameState, SAVE_VERSION } from './game';
+import { hashString } from './rng';
+
+export interface SaveEnvelope { format: 'minnesota-mayhem-save'; version: number; savedAt: number; checksum: string; data: GameState }
+
+export function checksum(json: string): string {
+  // two independent FNV-style hashes for corruption detection
+  const a = hashString(json);
+  let b = 5381;
+  for (let i = 0; i < json.length; i++) b = (Math.imul(b, 33) ^ json.charCodeAt(i)) >>> 0;
+  return a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0');
+}
+
+export function serialize(g: GameState): string {
+  const data = JSON.stringify(g);
+  const env = { format: 'minnesota-mayhem-save', version: g.version, savedAt: Date.now(), checksum: checksum(data) };
+  // data appended raw so the checksum covers the exact bytes
+  return JSON.stringify(env).slice(0, -1) + `,"data":${data}}`;
+}
+
+export class SaveError extends Error {}
+
+/** Migrations from older schema versions. Each step upgrades exactly one version. */
+const MIGRATIONS: Record<number, (d: any) => any> = {
+  1: d => { d.archive = d.archive ?? []; d.version = 2; return d; },
+  2: d => { d.stats = { exchangeTrades: 0, exchangePnl: 0, marketsSettled: 0, bestStreak: 0, streak: 0, earnedPrizes: 0, propertyIncome: 0, ...(d.stats ?? {}) }; d.version = 3; return d; },
+};
+
+export function migrate(d: any): GameState {
+  let v = d.version ?? 1;
+  if (v > SAVE_VERSION) throw new SaveError(`Save is from a newer version (${v})`);
+  while (v < SAVE_VERSION) {
+    const f = MIGRATIONS[v];
+    if (!f) throw new SaveError(`No migration from version ${v}`);
+    d = f(d); v = d.version;
+  }
+  return d as GameState;
+}
+
+export function deserialize(text: string): GameState {
+  let env: any;
+  try { env = JSON.parse(text); } catch { throw new SaveError('Save file is not valid JSON (corrupted?)'); }
+  if (env?.format !== 'minnesota-mayhem-save' || !env.data) throw new SaveError('Not a Minnesota Mayhem save');
+  const i = text.indexOf(',"data":');
+  const raw = text.slice(i + 8, -1);
+  if (checksum(raw) !== env.checksum) throw new SaveError('Checksum mismatch — the save is corrupted or was edited');
+  const g = migrate(env.data);
+  validate(g);
+  return g;
+}
+
+export function validate(g: GameState) {
+  const p = g.player;
+  if (!p || !Number.isInteger(p.bankroll) || p.bankroll < 0) throw new SaveError('Invalid bankroll');
+  if (!Array.isArray(g.rivals) || !Array.isArray(g.markets)) throw new SaveError('Invalid world data');
+  if (p.rank < 0 || p.rank > 8) throw new SaveError('Invalid rank');
+}
+
+// ---------------------------------------------------------------- IndexedDB
+const DB = 'minnesota-mayhem';
+const STORE = 'saves';
+
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(STORE); };
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+export async function idbPut(key: string, value: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(value, key);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+  db.close();
+}
+export async function idbGet(key: string): Promise<string | undefined> {
+  const db = await openDb();
+  const v = await new Promise<string | undefined>((res, rej) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const r = tx.objectStore(STORE).get(key);
+    r.onsuccess = () => res(r.result as string | undefined);
+    r.onerror = () => rej(r.error);
+  });
+  db.close();
+  return v;
+}
+
+/**
+ * Two-slot atomic save: write to the inactive slot, then flip the pointer.
+ * An interrupted write leaves the previous slot intact.
+ */
+export async function saveGame(g: GameState): Promise<void> {
+  const text = serialize(g);
+  const cur = (await idbGet('pointer')) ?? 'B';
+  const next = cur === 'A' ? 'B' : 'A';
+  await idbPut('slot' + next, text);
+  await idbPut('pointer', next);
+  try { localStorage.setItem('mm-backup', text); } catch { /* quota: IndexedDB copy still exists */ }
+}
+
+export async function loadGame(): Promise<{ game: GameState | null; warning?: string }> {
+  const ptr = await idbGet('pointer');
+  const order = ptr === 'A' ? ['slotA', 'slotB'] : ['slotB', 'slotA'];
+  let warning: string | undefined;
+  for (const k of order) {
+    const t = await idbGet(k);
+    if (!t) continue;
+    try { return { game: deserialize(t), warning }; }
+    catch (e) { warning = `Primary save unreadable (${(e as Error).message}); restored the previous save.`; }
+  }
+  try {
+    const t = localStorage.getItem('mm-backup');
+    if (t) return { game: deserialize(t), warning: warning ?? 'Restored from local backup copy.' };
+  } catch { /* ignore */ }
+  return { game: null, warning };
+}
+
+export async function wipeSave(): Promise<void> {
+  await idbPut('slotA', ''); await idbPut('slotB', ''); await idbPut('pointer', 'A');
+  try { localStorage.removeItem('mm-backup'); } catch { /* ignore */ }
+}
