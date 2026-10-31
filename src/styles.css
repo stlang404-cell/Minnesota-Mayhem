@@ -429,9 +429,12 @@ label.check input { width: 20px; height: 20px; accent-color: var(--gold); }
   .play-btn { width: 100%; height: 96px; }
   .arena-options { grid-template-columns: 1fr; }
   .arsenal-strip { grid-template-columns: repeat(4, 1fr); font-size: .65rem; }
-  .table-area { height: auto; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: "s1 s2 s3" "oval oval oval" "s0 s0 s0"; gap: 6px; }
+  .table-area { height: auto; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "s1 s2 s3" "oval oval oval" "s0 s0 s0"; gap: 6px; }
   .table-oval { position: relative; inset: auto; grid-area: oval; border-radius: 40% / 50%; min-height: 150px; margin: 12px 8px; }
-  .seat { position: relative; inset: auto !important; transform: none !important; width: auto !important; padding: 4px; }
+  .seat { position: relative; inset: auto !important; transform: none !important; width: auto !important; padding: 4px; min-width: 0; overflow: hidden; }
+  .seat:not(.pos0) .seat-head { gap: 4px; }
+  .seat:not(.pos0) .seat-status .act { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .match { max-width: 100vw; overflow-x: hidden; }
   .seat.pos0 { grid-area: s0; } .seat.pos1 { grid-area: s1; } .seat.pos2 { grid-area: s2; } .seat.pos3 { grid-area: s3; }
   .seat:not(.pos0) .seat-head img { width: 28px; height: 28px; }
   .seat:not(.pos0) .seat-name { font-size: .7rem; }
@@ -441,7 +444,18 @@ label.check input { width: 20px; height: 20px; accent-color: var(--gold); }
   .seat-status { font-size: .62rem; }
   .pcard { width: 38px; height: 54px; } .pcard .cr { font-size: 11px; } .pcard .cs { font-size: 18px; }
   .pcard.small { width: 24px; height: 34px; } .pcard.small .cr { font-size: 7px; } .pcard.small .cs { font-size: 12px; }
-  .seat.pos0 .pcard { width: 48px; height: 68px; }
+  .seat.pos0 { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 8px; }
+  .seat.pos0 .seat-cards { grid-row: span 2; margin: 0; }
+  .seat.pos0 .pcard { width: 44px; height: 62px; }
+  .table-oval { min-height: 120px; margin: 8px 4px; }
+  .match { padding: 4px 4px 8px; }
+  .match-top { gap: 4px; }
+  .match-info span { font-size: 7px; }
+  .hero-panel { padding: 6px; }
+  .arsenal-bar { gap: 4px; }
+  .resolve-meter { margin-left: 0; }
+  .feed { max-height: 48px; }
+  .actions .btn { min-height: 46px; min-width: 0; }
   .ab-slot { width: 42px; height: 50px; }
   .actions { width: 100%; justify-content: stretch; }
   .actions > .btn { flex: 1; }

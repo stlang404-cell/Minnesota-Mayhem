@@ -101,6 +101,7 @@ export function createMatch(players: MatchPlayer[], seed: number, kind: MatchSta
     const a = m.arsenal[i];
     const vv = has(m, i, 'vestal_vigil'); if (vv) a.wardsLeft += vv.value;
     const pr = has(m, i, 'pax_romana'); if (pr) a.wardsLeft += pr.value;
+    const sn = has(m, i, 'spy_network'); if (sn) a.wardsLeft += sn.value;
     const gt = has(m, i, 'golden_touch'); if (gt) a.rewardPct += gt.value;
     const gc = has(m, i, 'gold_of_croesus'); if (gc) { a.rewardPct += gc.value; a.rebatePct = Math.max(a.rebatePct, 25); }
     const ml = has(m, i, 'merchants_ledger'); if (ml) a.rebatePct = Math.max(a.rebatePct, ml.value);
@@ -147,7 +148,7 @@ function seatOrder(m: MatchState, seat: number) {
   return (seat - m.table.dealer - 1 + n) % n;
 }
 
-function resolveEffects(m: MatchState, effects: Effect[], bb: number) {
+function resolveEffects(m: MatchState, effects: Effect[], bb: number, gains?: number[], contrib?: number[]) {
   effects.sort((a, b) => a.prio - b.prio || seatOrder(m, a.owner) - seatOrder(m, b.owner));
   const t = m.table;
   const recv = t.seats.map(() => 0), paid = t.seats.map(() => 0);
@@ -164,14 +165,20 @@ function resolveEffects(m: MatchState, effects: Effect[], bb: number) {
       }
       if (payer.wardsLeft > 0) {
         payer.wardsLeft--;
-        emit(m, e.from, 'ability', `${t.seats[e.from].name}'s Ward negates ${e.label}`, has(m, e.from, 'pax_romana') ? 'pax_romana' : 'vestal_vigil');
+        emit(m, e.from, 'ability', `${t.seats[e.from].name}'s Ward negates ${e.label}`, has(m, e.from, 'pax_romana') ? 'pax_romana' : has(m, e.from, 'vestal_vigil') ? 'vestal_vigil' : 'spy_network');
         continue;
       }
     }
     let amt = Math.round(e.bb * bb);
     amt = Math.min(amt, cap - recv[e.to], cap - paid[e.from]);
-    const keep = e.prio === 1 ? 1 : 0;
-    amt = Math.min(amt, t.seats[e.from].stack - keep);
+    if (e.prio === 1) {
+      // tributes: at most 25% of the payer's stack; never eliminates (payer keeps >= 1 chip)
+      amt = Math.min(amt, Math.floor(t.seats[e.from].stack * 0.25), t.seats[e.from].stack - 1);
+    } else {
+      // restitution: bounded by what the loser put in and by half of the payer's net gain this hand
+      const gain = Math.max(0, (gains?.[e.from] ?? 0) - paid[e.from]);
+      amt = Math.min(amt, contrib?.[e.to] ?? amt, Math.floor(gain * 0.5), t.seats[e.from].stack - 1);
+    }
     if (amt <= 0) continue;
     const moved = transferChips(t, e.from, e.to, amt);
     recv[e.to] += moved; paid[e.from] += moved;
@@ -214,7 +221,7 @@ export function beginHand(m: MatchState) {
     const pf = has(m, i, 'patrons_favor');
     if (pf && nextHand % 4 === 0) { gainResolve(m, i, pf.value); emit(m, i, 'ability', `Patron's Favor: +${pf.value} Resolve`, 'patrons_favor'); }
     const sr = has(m, i, 'scroll_of_records');
-    if (sr && nextHand === 11 && usesLeft(m, i, sr)) { consume(m, i, sr); gainResolve(m, i, sr.value); emit(m, i, 'ability', `Scroll of Records complete: +${sr.value} Resolve`, 'scroll_of_records'); }
+    if (sr && nextHand === 11 && usesLeft(m, i, sr)) { consume(m, i, sr); gainResolve(m, i, sr.value); m.arsenal[i].wardsLeft++; emit(m, i, 'ability', `Scroll of Records complete: +${sr.value} Resolve`, 'scroll_of_records'); }
     const tc = has(m, i, 'tax_collector');
     if (tc && nextHand > 1 && bbNext > prevLevel) {
       for (const j of live) if (j !== i) effects.push({ prio: 1, owner: i, from: j, to: i, bb: tc.value, source: 'tax_collector', label: 'Tax Collector' });
@@ -447,10 +454,11 @@ function endOfHand(m: MatchState) {
       if (anyWin) {
         A.formation = Math.min(maxF, A.formation + 1);
         if (A.formation >= 3) {
-          const losers = t.seats.map((_, i) => i).filter(i => i !== o && dealtIn[i] && net[i] < 0);
+          const contested = new Set([...sdLosers, ...postFolders(o)]);
+          const losers = t.seats.map((_, i) => i).filter(i => i !== o && dealtIn[i] && net[i] < 0 && contested.has(i));
           if (losers.length) {
             const tgt = losers.reduce((a, b) => t.seats[b].stack > t.seats[a].stack ? b : a);
-            fire(x); trib(x, tgt, Math.min(2, x.value * A.formation), `Legion Formation (${A.formation})`);
+            fire(x); trib(x, tgt, Math.min(1, x.value * A.formation), `Legion Formation (${A.formation})`);
           }
         }
       } else if (lostSd) A.formation = 0;
@@ -460,7 +468,7 @@ function endOfHand(m: MatchState) {
     if (armed('gladiators_oath') && (x = has(m, o, 'gladiators_oath'))) A.pendingWaivers = Math.max(A.pendingWaivers, Math.min(3, x.value));
     // comeback
     const wasAllIn = t.seats[o].stack === 0 || r.contrib[o] >= t.seats[o].startStack;
-    if ((x = ab('last_stand')) && wasAllIn && net[o] < 0 && t.seats[o].startStack <= 10 * bb && bigWinner !== o) {
+    if ((x = ab('last_stand')) && wasAllIn && net[o] < 0 && t.seats[o].startStack <= 8 * bb && bigWinner !== o && t.seats.filter(z => !z.out).length >= 3) {
       fire(x, `LAST STAND! ${t.seats[o].name} refuses to fall`);
       effects.push({ prio: 2, owner: o, from: bigWinner, to: o, bb: x.value, source: x.def.id, label: 'Last Stand' });
     }
@@ -471,11 +479,11 @@ function endOfHand(m: MatchState) {
     // information
     if ((x = has(m, o, 'spy_network'))) {
       const caught = bluffers.filter(j => j !== o && categoryOf(r.scores[j].score) === 0);
-      if (caught.length) { gainResolve(m, o, x.value); fire(x, `Spy Network notes the bluff: +${x.value} Resolve`); }
+      if (caught.length) { gainResolve(m, o, 1); fire(x, `Spy Network notes the bluff: +1 Resolve`); }
     }
     if ((x = ab('sibyls_insight')) && r.showdown) { gainResolve(m, o, x.value); fire(x); }
   }
-  resolveEffects(m, effects, bb);
+  resolveEffects(m, effects, bb, net, r.contrib);
   // post-resolution: phoenix
   for (let o = 0; o < n; o++) {
     if (!dealtIn[o]) continue;
@@ -567,7 +575,9 @@ export function step(m: MatchState): boolean {
   if (m.players[seat].isHuman) return false;
   const rng = new Rng(mix(m.seed, 'ai', t.handNo, seat, t.log.length));
   const view = buildView(m, seat);
-  const d = decide(view, m.players[seat].profile, rng, m.aiIters);
+  const infoCount = m.players[seat].loadout.filter(l => ABILITY_MAP[l.defId]?.archetype === 'information').length;
+  const prof = infoCount ? { ...m.players[seat].profile, skill: Math.min(1, m.players[seat].profile.skill + 0.04 * infoCount) } : m.players[seat].profile;
+  const d = decide(view, prof, rng, m.aiIters);
   aiArm(m, seat, view, d.equity, d.action, rng);
   try { act(m, seat, d.action); }
   catch {

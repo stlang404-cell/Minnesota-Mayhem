@@ -98,9 +98,10 @@ export function strength(r: Rival): number {
   return 10 ** (r.rating / 400) * (0.7 + 0.6 * r.profile.skill);
 }
 
-/** Plackett-Luce winner probabilities from strengths. */
+/** Plackett-Luce winner probabilities from strengths, softened (exponent 0.5) — calibrated by
+ * log-loss against 500 fully simulated matches (see docs/BALANCE_REPORT.md). */
 export function winProbabilities(rs: Rival[]): number[] {
-  const s = rs.map(strength);
+  const s = rs.map(r => Math.sqrt(strength(r)));
   const tot = s.reduce((a, b) => a + b, 0);
   return s.map(x => x / tot);
 }

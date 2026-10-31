@@ -1,0 +1,65 @@
+
+ RUN  v5.0.5 /home/user/Minnesota-Mayhem
+
+ ✓ tests/save.test.ts > 10. rank rating updates > multi-player Elo is zero-sum and orders by placement 2ms
+ ✓ tests/save.test.ts > 10. rank rating updates > rating floors and ceilings protect progress 1ms
+ ✓ tests/save.test.ts > 11. promotion trials > passing promotes, failing keeps rank with a bounded penalty; wealth cannot buy rank 443ms
+ ✓ tests/meta.test.ts > 10. rank rating updates > multi-player Elo is zero-sum and orders by placement 2ms
+ ✓ tests/meta.test.ts > 10. rank rating updates > rating floors and ceilings protect progress 1ms
+ ✓ tests/meta.test.ts > 11. promotion trials > passing promotes, failing keeps rank with a bounded penalty; wealth cannot buy rank 464ms
+ ✓ tests/save.test.ts > 12. dollar accounting & ledger > bankroll always equals the sum of ledger entries; no overdrafts; idempotent keys 265ms
+ ✓ tests/save.test.ts > 12. dollar accounting & ledger > match results cannot be collected twice 38ms
+ ✓ tests/save.test.ts > 13. forge transactions > buy, upgrade, sigil, fuse, dismantle with correct charges 5ms
+ ✓ tests/save.test.ts > 14. property transactions > buy/expand/sell with income and upkeep each day 2ms
+ ✓ tests/save.test.ts > 15/16. market pricing & execution > LMSR prices sum to 1, initial q reproduces priors, cost is path independent 1ms
+ ✓ tests/save.test.ts > 15/16. market pricing & execution > buying raises the price; round-trip loses money (no free arbitrage) 2ms
+ ✓ tests/save.test.ts > 17. position accounting > tracks cost basis, realized and unrealized P/L; no naked shorts 1ms
+ ✓ tests/save.test.ts > 18. contract settlement > settles exactly once to the canonical match winner and updates rival careers 53ms
+ ✓ tests/meta.test.ts > 12. dollar accounting & ledger > bankroll always equals the sum of ledger entries; no overdrafts; idempotent keys 397ms
+ ✓ tests/meta.test.ts > 12. dollar accounting & ledger > match results cannot be collected twice 42ms
+ ✓ tests/meta.test.ts > 13. forge transactions > buy, upgrade, sigil, fuse, dismantle with correct charges 6ms
+ ✓ tests/meta.test.ts > 14. property transactions > buy/expand/sell with income and upkeep each day 2ms
+ ✓ tests/meta.test.ts > 15/16. market pricing & execution > LMSR prices sum to 1, initial q reproduces priors, cost is path independent 1ms
+ ✓ tests/meta.test.ts > 15/16. market pricing & execution > buying raises the price; round-trip loses money (no free arbitrage) 3ms
+ ✓ tests/meta.test.ts > 17. position accounting > tracks cost basis, realized and unrealized P/L; no naked shorts 1ms
+ ✓ tests/meta.test.ts > 18. contract settlement > settles exactly once to the canonical match winner and updates rival careers 119ms
+ ✓ tests/save.test.ts > 18. contract settlement > market maker loss stays within the LMSR bound 217ms
+ ✓ tests/meta.test.ts > 18. contract settlement > market maker loss stays within the LMSR bound 268ms
+ ✓ tests/save.test.ts > 19. cancellation & refunds > refunds the open cost basis exactly once 1ms
+ ✓ tests/save.test.ts > 19. cancellation & refunds > trading is locked while a hand is being played 19ms
+ ✓ tests/save.test.ts > 23. bankruptcy recovery > a broke player can always play free recovery matches and rebuild 297ms
+ ✓ tests/meta.test.ts > 19. cancellation & refunds > refunds the open cost basis exactly once 2ms
+ ✓ tests/meta.test.ts > 19. cancellation & refunds > trading is locked while a hand is being played 2ms
+ ✓ tests/meta.test.ts > 23. bankruptcy recovery > a broke player can always play free recovery matches and rebuild 189ms
+ ✓ tests/arsenal.test.ts > 7. arsenal activation timing > actives may only be armed on your turn, in their window, with Resolve 12ms
+ ✓ tests/arsenal.test.ts > 7. arsenal activation timing > every ability has complete metadata 5ms
+ ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > Arsenal effects conserve chips and never go negative across many matches 1642ms
+ ✓ tests/save.test.ts > 20. save / load > round-trips a full career including an in-progress match and live market 323ms
+ ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > wards negate tributes before they are paid 0ms
+ ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > set bonuses and synergies are detected 10ms
+ ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > sigils apply bounded tradeoffs 1ms
+ ✓ tests/arsenal.test.ts > 9. AI information boundaries > AI view contains no opponent hole cards and decisions ignore hidden cards 6ms
+ ✓ tests/arsenal.test.ts > 9. AI information boundaries > AI-only matches are deterministic for a seed 60ms
+ ✓ tests/poker.test.ts > 1. hand rankings > ranks every category in order 5ms
+ ✓ tests/poker.test.ts > 1. hand rankings > handles the wheel straight and royal flush 1ms
+ ✓ tests/poker.test.ts > 1. hand rankings > picks best two pair and kickers 0ms
+ ✓ tests/poker.test.ts > 1. hand rankings > full house picks highest trips + best pair from two trips 1ms
+ ✓ tests/poker.test.ts > 2. tie resolution > equal hands tie, kicker breaks ties 1ms
+ ✓ tests/poker.test.ts > 3. betting legality > enforces turn order, min raise and check rules 3ms
+ ✓ tests/poker.test.ts > 3. betting legality > big blind gets the option when limped to 1ms
+ ✓ tests/poker.test.ts > 3. betting legality > incomplete all-in raise does not reopen betting 1ms
+ ✓ tests/poker.test.ts > 4/5. side pots & all-in > builds correct main and side pots 1ms
+ ✓ tests/poker.test.ts > 4/5. side pots & all-in > multi-way all-in settles with exact chip conservation over many seeds 55ms
+ ✓ tests/poker.test.ts > 4/5. side pots & all-in > returns uncalled bets 0ms
+ ✓ tests/poker.test.ts > 6. tournament elimination > eliminates busted players, orders placements, and finishes 0ms
+ ✓ tests/poker.test.ts > 6. tournament elimination > heads-up: dealer posts the small blind 0ms
+ ✓ tests/save.test.ts > 20. save / load > detects corruption and tampering 8ms
+ ✓ tests/save.test.ts > 20. save / load > migrates older schema versions 6ms
+ ✓ tests/save.test.ts > 20. save / load > IndexedDB two-slot save survives a corrupted primary slot 26ms
+ ✓ tests/save.test.ts > 24. long-running simulation > a 40-match career keeps every invariant 2441ms
+
+ Test Files  4 passed (4)
+      Tests  56 passed (56)
+   Start at  19:57:11
+   Duration  4.86s (tests 83%, transform 14%, import 2%)
+

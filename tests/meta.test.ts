@@ -105,7 +105,7 @@ describe('14. property transactions', () => {
   it('buy/expand/sell with income and upkeep each day', () => {
     const g = G.newGame('Lord', 6);
     g.player.rank = 2; G.ledger(g, 200000, 'test', 'grant');
-    expect(G.buyAsset(g, 'arena')).toMatch(/Requires/);
+    expect(G.buyAsset(g, 'arena')).toMatch(/Requires/); expect(G.buyAsset(g, 'estate')).toMatch(/Requires/);
     const b0 = g.player.bankroll;
     expect(G.buyAsset(g, 'villa')).toBeNull();
     expect(g.player.bankroll).toBe(b0 - ASSETS[0].levels[0].cost);

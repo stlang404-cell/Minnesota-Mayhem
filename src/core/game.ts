@@ -17,6 +17,7 @@ import { mix, Rng, RngState } from './rng';
 
 export const SAVE_VERSION = 3;
 export const STARTING_BANKROLL = 50000; // $500.00
+export const PODIUM_BONUS = [6, 3, 0, 0];
 
 export type ArenaKind = 'arena' | 'trial' | 'recovery' | 'club' | 'grand';
 
@@ -261,7 +262,8 @@ export function finishActiveMatch(g: GameState): MatchReport | null {
       }
     } else {
       const before = p.rating;
-      p.rating = applyRating(p.rank, p.rating, d);
+      // Career-achievement bonus for podium finishes keeps the climb moving (bounded by rank ceilings and trials).
+      p.rating = applyRating(p.rank, p.rating, d + PODIUM_BONUS[place]);
       ratingDelta = p.rating - before;
     }
   }

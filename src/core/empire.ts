@@ -3,7 +3,7 @@ export interface AssetLevel { cost: number; income: number; upkeep: number; effe
 export interface AssetDef { id: string; name: string; icon: string; unlockRank: number; desc: string; levels: AssetLevel[] }
 
 export const ASSETS: AssetDef[] = [
-  { id: 'villa', name: 'Lakeside Villa', icon: 'villa', unlockRank: 1, desc: 'A warm hearth on the frozen shore. Modest, reliable rent.',
+  { id: 'villa', name: 'Lakeside Villa', icon: 'villa', unlockRank: 0, desc: 'A warm hearth on the frozen shore. Modest, reliable rent.',
     levels: [
       { cost: 40000, income: 1200, upkeep: 200, effect: '+$10/day net' },
       { cost: 60000, income: 2000, upkeep: 400, effect: '+$16/day net' },

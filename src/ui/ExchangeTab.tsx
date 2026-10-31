@@ -131,7 +131,7 @@ function MarketDetail({ g, m, qty, setQty, trade, auto, setAuto, lib, toast }: {
                   {lib > 0 && rv && <div className="form-row">Form {rv.form.slice(-5).map((f, k) => <span key={k} className={`form f${f}`}>{f + 1}</span>)} · {rv.style}</div>}
                 </div>
               </div>
-              <div className="oc-price"><b>{cents(p[i])}</b>{lib > 0 && <small title="Augur's Library fair-value model (public info)">fair {pct(fair[i])}</small>}</div>
+              <div className="oc-price"><b>{m.status === 'settled' ? (m.result === i ? '$1.00' : '0¢') : cents(p[i])}</b>{lib > 0 && <small title="Augur's Library fair-value model (public info)">fair {pct(fair[i])}</small>}</div>
               {t && <div className="oc-stack"><div className="stackbar"><div style={{ width: pct(totalChips ? (seat!.stack + seat!.totalIn) / totalChips : 0), background: SEAT_COLORS[i] }} /></div><small>{out ? 'eliminated' : `${seat!.stack} chips`}</small></div>}
               <div className="oc-pos">{pos.shares[i] > 0 ? <>{pos.shares[i]} @ {cents(pos.cost[i] / pos.shares[i] / 100)}<small> value {money(pos.shares[i] * p[i] * 100)}</small></> : <span className="muted">no position</span>}</div>
               <div className="oc-trade">

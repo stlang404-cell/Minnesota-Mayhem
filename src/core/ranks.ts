@@ -10,10 +10,10 @@ export const RANKS: RankDef[] = [
   { name: 'Gladiator', threshold: 1170, entry: 4500, color: '#c0603a', arena: 'Ludus of the North', motto: 'Blood on the sand, ice in the veins.', aiSkill: 0.45, unlock: 'Sigil crafting, Card Club' },
   { name: 'Centurion', threshold: 1260, entry: 6500, color: '#b33a3a', arena: 'Legion Camp at the Lakes', motto: 'Command a hundred bluffs.', aiSkill: 0.55, unlock: 'Epic abilities, Tournament Arena' },
   { name: 'Praetor', threshold: 1350, entry: 9000, color: '#3a7bb3', arena: 'Hall of Magistrates', motto: 'Judge every bet.', aiSkill: 0.62, unlock: 'Legendary fusions, Sponsorships' },
-  { name: 'Consul', threshold: 1440, entry: 12500, color: '#7a3ab3', arena: 'Senate Floor', motto: 'The republic bends to your raise.', aiSkill: 0.7, unlock: 'Luxury Estate' },
-  { name: 'Imperator', threshold: 1530, entry: 17000, color: '#d4a017', arena: 'Triumphal Way', motto: 'Victory is your herald.', aiSkill: 0.78, unlock: 'Imperial cosmetics' },
-  { name: 'Caesar', threshold: 1620, entry: 23000, color: '#e8c33a', arena: 'Palatine Hill', motto: 'All roads lead to your table.', aiSkill: 0.85, unlock: 'Golden table' },
-  { name: 'Augustus', threshold: 1710, entry: 30000, color: '#fff2a8', arena: 'Temple of the Divine', motto: 'You are the empire.', aiSkill: 0.92, unlock: 'Prestige Ascension' },
+  { name: 'Consul', threshold: 1440, entry: 12500, color: '#7a3ab3', arena: 'Senate Floor', motto: 'The republic bends to your raise.', aiSkill: 0.68, unlock: 'Luxury Estate' },
+  { name: 'Imperator', threshold: 1530, entry: 17000, color: '#d4a017', arena: 'Triumphal Way', motto: 'Victory is your herald.', aiSkill: 0.73, unlock: 'Imperial cosmetics' },
+  { name: 'Caesar', threshold: 1620, entry: 23000, color: '#e8c33a', arena: 'Palatine Hill', motto: 'All roads lead to your table.', aiSkill: 0.78, unlock: 'Golden table' },
+  { name: 'Augustus', threshold: 1710, entry: 30000, color: '#fff2a8', arena: 'Temple of the Divine', motto: 'You are the empire.', aiSkill: 0.82, unlock: 'Prestige Ascension' },
 ];
 
 export const K_FACTOR = 48;
