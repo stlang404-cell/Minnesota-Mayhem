@@ -17,7 +17,7 @@ export function ForgeTab({ g, toast }: { g: GameState; toast: (t: string, k?: st
   const inst = owned(sel);
   const run = (f: (g: GameState) => string | null, ok: string) => {
     const err = dispatch(f);
-    if (err) { sfx.error(); toast(err, 'error'); } else { sfx.coin(); toast(ok, 'purchase'); }
+    if (err) { sfx.error(); toast(err, 'error'); } else { sfx.coin(); if (ok) toast(ok, 'purchase'); }
   };
   const list = ABILITIES.filter(a => (filter === 'all' || a.archetype === filter) && (!a.fusion || owned(a.id)));
   const sets = setBonuses(equippedIds);
@@ -83,9 +83,9 @@ export function ForgeTab({ g, toast }: { g: GameState; toast: (t: string, k?: st
               {would.length > 0 && <p className="syn gold">Equipping activates: {would.map(s => `${s.name} (${s.desc})`).join(', ')}</p>}
               {partners.length > 0 && <p className="muted">Synergy partners: {partners.map(s => `${s.name} with ${s.needs.filter(n => n !== sel).map(n => ABILITY_MAP[n].name).join(', ')}`).join(' · ')}</p>}
               <div className="anvil-actions">
-                {!inst && !d.fusion && <button className="btn gold" disabled={d.unlockRank > p.rank} onClick={() => run(g => buyAbility(g, d.id), `Unlocked ${d.name}!`)}>Buy · {money(priceOf(g, d.price))}</button>}
+                {!inst && !d.fusion && <button className="btn gold" disabled={d.unlockRank > p.rank} onClick={() => run(g => buyAbility(g, d.id), '')}>Buy · {money(priceOf(g, d.price))}</button>}
                 {inst && <button className="btn" onClick={() => { const e = dispatch(g => toggleEquip(g, inst.uid)); if (e) toast(e, 'error'); else sfx.card(); }}>{p.loadout.includes(inst.uid) ? 'Unequip' : 'Equip'}</button>}
-                {inst && inst.level < 3 && <button className="btn gold" onClick={() => run(g => upgradeAbility(g, inst.uid), `${d.name} reforged!`)}>Upgrade → Lv{inst.level + 1} · {money(priceOf(g, upgradeCost(d, inst.level + 1)))}</button>}
+                {inst && inst.level < 3 && <button className="btn gold" onClick={() => run(g => upgradeAbility(g, inst.uid), '')}>Upgrade → Lv{inst.level + 1} · {money(priceOf(g, upgradeCost(d, inst.level + 1)))}</button>}
                 {inst && <button className="btn danger small" onClick={() => { if (confirm(`Dismantle ${d.name}? You recover ${money(Math.round(d.price * 0.4))}.`)) run(g => dismantle(g, inst.uid), 'Dismantled'); }}>Dismantle</button>}
               </div>
               {inst && (
@@ -121,7 +121,7 @@ export function ForgeTab({ g, toast }: { g: GameState; toast: (t: string, k?: st
                 <b>{f.name}</b>
                 <small>{f.text(f.values[0])}</small>
                 <small className="muted">{ABILITY_MAP[a].name} + {ABILITY_MAP[b].name}</small>
-                <button className="btn gold small" disabled={done || !have || p.rank < f.unlockRank} onClick={() => run(g => fuse(g, f.id), `${f.name} forged!`)}>
+                <button className="btn gold small" disabled={done || !have || p.rank < f.unlockRank} onClick={() => run(g => fuse(g, f.id), '')}>
                   {done ? 'Forged' : p.rank < f.unlockRank ? `🔒 ${RANKS[f.unlockRank].name}` : `Forge · ${money(priceOf(g, f.price))}`}
                 </button>
               </div>

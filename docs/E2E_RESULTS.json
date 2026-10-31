@@ -12,7 +12,7 @@
   {
     "step": "3. Play a full four-player match",
     "ok": true,
-    "detail": "32 decisions; result: ✕ 4th Place"
+    "detail": "63 decisions; result: ✕ 3rd Place"
   },
   {
     "step": "4. Use an Arsenal ability",
@@ -22,7 +22,7 @@
   {
     "step": "5. Win or lose Dollars",
     "ok": true,
-    "detail": "$500 → $480"
+    "detail": "$500 → $499.32"
   },
   {
     "step": "6. Buy an upgrade",
@@ -32,22 +32,22 @@
   {
     "step": "7. Enter another match",
     "ok": true,
-    "detail": "44 decisions"
+    "detail": "69 decisions"
   },
   {
     "step": "8. Progress toward promotion",
     "ok": true,
-    "detail": "rating 979 → 960; objective: OBJECTIVE Visit the EXCHANGE and back a rival in an AI match."
+    "detail": "rating 995 → 975; objective: OBJECTIVE Visit the EXCHANGE and back a rival in an AI match."
   },
   {
     "step": "9. View an AI-only match market",
     "ok": true,
-    "detail": "competitors: Aulus Scaevola the Patient, Sextus Glaber, Decimus Magnus, Tiberius Pulcher"
+    "detail": "competitors: Livia Frost, Marcus Calvus, Cornelia Glacius, Lucius Nerva"
   },
   {
     "step": "10. Purchase a prediction contract",
     "ok": true,
-    "detail": "position: 10 @ 27¢ value $2.63"
+    "detail": "position: 10 @ 21¢ value $2.20"
   },
   {
     "step": "11. Watch / fast-forward the match",
@@ -57,7 +57,7 @@
   {
     "step": "12. Settle the contract",
     "ok": true,
-    "detail": "Decimus Magnus wins! Your P/L on this market: −$2.72 (fees $0.06) 1st Decimus Magnus 2nd Sextus Glaber 3rd Tiberius Pulcher 4th Aulus Scaevola (bankroll $420 → $417.22)"
+    "detail": "Livia Frost wins! Your P/L on this market: $7.87 (fees $0.05) 1st Livia Frost 2nd Marcus Calvus 3rd Lucius Nerva 4th Cornelia Glacius (bankroll $439.32 → $447.14)"
   },
   {
     "step": "13. Buy an Empire asset",
@@ -67,7 +67,7 @@
   {
     "step": "14. Save and reload",
     "ok": true,
-    "detail": "bankroll $17.22 and Villa restored after reload"
+    "detail": "bankroll $47.14 and Villa restored after reload"
   },
   {
     "step": "15. Recover from a low bankroll",
@@ -87,7 +87,7 @@
   {
     "step": "22. Mobile responsiveness",
     "ok": true,
-    "detail": "iPhone 13 viewport: no horizontal overflow; action button 46px tall; full match played by touch (47 taps)"
+    "detail": "iPhone 13 viewport: no horizontal overflow; action button 46px tall; full match played by touch (28 taps)"
   },
   {
     "step": "No runtime errors (mobile)",

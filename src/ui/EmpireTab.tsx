@@ -14,7 +14,7 @@ export function EmpireTab({ g, toast }: { g: GameState; toast: (t: string, k?: s
   const [showLedger, setShowLedger] = useState(false);
   const run = (f: (g: GameState) => string | null, ok: string) => {
     const err = dispatch(f);
-    if (err) { sfx.error(); toast(err, 'error'); } else { sfx.coin(); toast(ok, 'purchase'); }
+    if (err) { sfx.error(); toast(err, 'error'); } else { sfx.coin(); if (ok) toast(ok, 'purchase'); }
   };
   const doExport = () => {
     const blob = new Blob([exportSave()], { type: 'application/json' });
@@ -56,7 +56,7 @@ export function EmpireTab({ g, toast }: { g: GameState; toast: (t: string, k?: s
                 {next ? (
                   <>
                     <p className="muted">Next: {next.effect}{net > 0 ? ` · payback ≈ ${Math.ceil(next.cost / net)} days` : ''}</p>
-                    <button className="btn gold" disabled={locked} onClick={() => run(g => buyAsset(g, a.id), `${a.name} ${lv ? 'expanded' : 'acquired'}!`)}>
+                    <button className="btn gold" disabled={locked} onClick={() => run(g => buyAsset(g, a.id), '')}>
                       {locked ? `🔒 ${RANKS[a.unlockRank].name}` : `${lv ? 'Expand' : 'Acquire'} · ${money(next.cost)}`}
                     </button>
                   </>
