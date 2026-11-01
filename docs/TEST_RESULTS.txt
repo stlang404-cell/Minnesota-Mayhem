@@ -1,62 +1,69 @@
 
  RUN  v5.0.5 /home/user/Minnesota-Mayhem
 
- ✓ tests/v2.test.ts > V1 save migration > migrates the frozen Version 1 save, preserving progress and resuming the in-progress match & markets 433ms
- ✓ tests/save.test.ts > 10. rank rating updates > multi-player Elo is zero-sum and orders by placement 2ms
+ ✓ tests/save.test.ts > 10. rank rating updates > multi-player Elo is zero-sum and orders by placement 3ms
  ✓ tests/save.test.ts > 10. rank rating updates > rating floors and ceilings protect progress 1ms
- ✓ tests/save.test.ts > 11. promotion trials > passing promotes, failing keeps rank with a bounded penalty; wealth cannot buy rank 439ms
- ✓ tests/save.test.ts > 12. dollar accounting & ledger > bankroll always equals the sum of ledger entries; no overdrafts; idempotent keys 254ms
- ✓ tests/save.test.ts > 12. dollar accounting & ledger > match results cannot be collected twice 91ms
- ✓ tests/save.test.ts > 13. forge transactions > buy, upgrade, sigil, fuse, dismantle with correct charges 29ms
- ✓ tests/v2.test.ts > game modes > each mode starts, resolves and keeps the ledger consistent 475ms
- ✓ tests/save.test.ts > 14. property transactions > buy/expand/sell with income and upkeep each day 10ms
- ✓ tests/save.test.ts > 15/16. market pricing & execution > LMSR prices sum to 1, initial q reproduces priors, cost is path independent 5ms
- ✓ tests/save.test.ts > 15/16. market pricing & execution > buying raises the price; round-trip loses money (no free arbitrage) 6ms
- ✓ tests/save.test.ts > 17. position accounting > tracks cost basis, realized and unrealized P/L; no naked shorts 4ms
- ✓ tests/save.test.ts > 18. contract settlement > settles exactly once to the canonical match winner and updates rival careers 66ms
- ✓ tests/save.test.ts > 18. contract settlement > market maker loss stays within the LMSR bound 169ms
- ✓ tests/v2.test.ts > game modes > quick clash is shorter and halves the rating swing 218ms
- ✓ tests/save.test.ts > 19. cancellation & refunds > refunds the open cost basis exactly once 3ms
- ✓ tests/save.test.ts > 19. cancellation & refunds > trading is locked while a hand is being played 12ms
- ✓ tests/save.test.ts > 23. bankruptcy recovery > a broke player can always play free recovery matches and rebuild 108ms
- ✓ tests/v2.test.ts > game modes > daily challenge is seeded by date and pays only the first attempt 178ms
- ✓ tests/arsenal.test.ts > 7. arsenal activation timing > actives may only be armed on your turn, in their window, with Resolve 19ms
+ ✓ tests/save.test.ts > 11. promotion trials > passing promotes, failing keeps rank with a bounded penalty; wealth cannot buy rank 346ms
+ ✓ tests/v2.test.ts > V1 save migration > migrates the frozen Version 1 save, preserving progress and resuming the in-progress match & markets 435ms
+ ✓ tests/v2.test.ts > game modes > each mode starts, resolves and keeps the ledger consistent 430ms
+ ✓ tests/save.test.ts > 12. dollar accounting & ledger > bankroll always equals the sum of ledger entries; no overdrafts; idempotent keys 602ms
+ ✓ tests/save.test.ts > 12. dollar accounting & ledger > match results cannot be collected twice 115ms
+ ✓ tests/save.test.ts > 13. forge transactions > buy, upgrade, sigil, fuse, dismantle with correct charges 14ms
+ ✓ tests/save.test.ts > 14. property transactions > buy/expand/sell with income and upkeep each day 8ms
+ ✓ tests/save.test.ts > 15/16. market pricing & execution > LMSR prices sum to 1, initial q reproduces priors, cost is path independent 1ms
+ ✓ tests/save.test.ts > 15/16. market pricing & execution > buying raises the price; round-trip loses money (no free arbitrage) 9ms
+ ✓ tests/save.test.ts > 17. position accounting > tracks cost basis, realized and unrealized P/L; no naked shorts 13ms
+ ✓ tests/save.test.ts > 18. contract settlement > settles exactly once to the canonical match winner and updates rival careers 70ms
+ ✓ tests/save.test.ts > 18. contract settlement > market maker loss stays within the LMSR bound 222ms
+ ✓ tests/v2.test.ts > game modes > quick clash is shorter and halves the rating swing 570ms
+ ✓ tests/v2.test.ts > game modes > daily challenge is seeded by date and pays only the first attempt 174ms
+ ✓ tests/save.test.ts > 19. cancellation & refunds > refunds the open cost basis exactly once 4ms
+ ✓ tests/save.test.ts > 19. cancellation & refunds > trading is locked while a hand is being played 5ms
+ ✓ tests/save.test.ts > 23. bankruptcy recovery > a broke player can always play free recovery matches and rebuild 198ms
+ ✓ tests/save.test.ts > 20. save / load > round-trips a full career including an in-progress match and live market 267ms
+ ✓ tests/v2.test.ts > game modes > draft arena requires 8 picks from offered options and uses a temporary loadout 93ms
+ ✓ tests/v2.test.ts > game modes > survival gauntlet advances on top-2, can cash out once, and ends on failure 242ms
+ ✓ tests/v2.test.ts > game modes > imperial tournament: 16 entrants, canonical heats and final, pool fully distributed 426ms
+ ✓ tests/v2.test.ts > Exchange 2.0 contract books > first-elimination and long-match books resolve to the canonical match facts and settle once 59ms
+ ✓ tests/v2.test.ts > Exchange 2.0 contract books > a decided book locks trading before the match ends (no trading on known outcomes) 11ms
+ ✓ tests/v2.test.ts > Exchange 2.0 contract books > spectator stepping produces the same canonical result as fast-forward 150ms
+ ✓ tests/v3.test.ts > Imperial Circuit integrity > prize split sums to exactly 100% and every scheduled event has 16 distinct competitors 2917ms
+ ✓ tests/v3.test.ts > Imperial Circuit integrity > AI-only events: one canonical champion across bracket, history, news, market, rival titles 2387ms
+ ✓ tests/v3.test.ts > Imperial Circuit integrity > the player can enter an eligible event, play the heat (and final), and get paid exactly once 330ms
+ ✓ tests/v3.test.ts > Imperial Circuit integrity > season → qualification → Imperial Grand Championship → Hall of Champions (consistent champion) 1752ms
+ ✓ tests/v3.test.ts > Imperial Circuit integrity > no-show players are replaced after the grace period (no refund) and the event still runs 443ms
+ ✓ tests/v3.test.ts > Imperial Circuit integrity > champion markets: trade, crowd reaction, single settlement to the canonical champion 306ms
+ ✓ tests/v3.test.ts > Dynasty: sponsorships > upfront moves to the rival, prize share comes out of the rival winnings, conflicts are blocked 4ms
+ ✓ tests/v3.test.ts > save migration v2 → v3 (and v1 → v3) > migrates the frozen 2.0 save with an in-progress tournament and contract books, then plays on 1117ms
+ ✓ tests/save.test.ts > 20. save / load > detects corruption and tampering 8ms
+ ✓ tests/save.test.ts > 20. save / load > migrates older schema versions 5ms
+ ✓ tests/save.test.ts > 20. save / load > IndexedDB two-slot save survives a corrupted primary slot 17ms
+ ✓ tests/save.test.ts > 24. long-running simulation > a 40-match career keeps every invariant 7472ms
+ ✓ tests/v3.test.ts > save migration v2 → v3 (and v1 → v3) > the 1.0 save migrates through every version 78ms
+ ✓ tests/v3.test.ts > Grand Exchange: limit orders > buy limit above market fills partially at or better than the limit; escrow is exact 5ms
+ ✓ tests/v3.test.ts > Grand Exchange: limit orders > buy limit below market rests; sell orders reserve shares; orders expire at settlement 77ms
+ ✓ tests/v3.test.ts > Grand Exchange: limit orders > rejects invalid orders 3ms
+ ✓ tests/v3.test.ts > Legendary Arsenal (rule engine) > 122 abilities, 16 legendaries, ≥10 named combos; every rule ability has a complete rule 1ms
+ ✓ tests/v3.test.ts > Legendary Arsenal (rule engine) > deterministic replay and chip conservation with random 3.0 loadouts 705ms
+ ✓ tests/arsenal.test.ts > 7. arsenal activation timing > actives may only be armed on your turn, in their window, with Resolve 12ms
  ✓ tests/arsenal.test.ts > 7. arsenal activation timing > every ability has complete metadata 9ms
- ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > Arsenal effects conserve chips and never go negative across many matches 1310ms
+ ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > Arsenal effects conserve chips and never go negative across many matches 1523ms
  ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > wards negate tributes before they are paid 1ms
- ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > set bonuses and synergies are detected 4ms
+ ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > set bonuses and synergies are detected 2ms
  ✓ tests/arsenal.test.ts > 8. combo resolution & integrity > sigils apply bounded tradeoffs 1ms
- ✓ tests/arsenal.test.ts > 9. AI information boundaries > AI view contains no opponent hole cards and decisions ignore hidden cards 2ms
- ✓ tests/arsenal.test.ts > 9. AI information boundaries > AI-only matches are deterministic for a seed 89ms
- ✓ tests/save.test.ts > 20. save / load > round-trips a full career including an in-progress match and live market 219ms
- ✓ tests/v2.test.ts > game modes > draft arena requires 8 picks from offered options and uses a temporary loadout 77ms
- ✓ tests/v2.test.ts > game modes > survival gauntlet advances on top-2, can cash out once, and ends on failure 183ms
- ✓ tests/v2.test.ts > game modes > imperial tournament: 16 entrants, canonical heats and final, pool fully distributed 345ms
- ✓ tests/v2.test.ts > Exchange 2.0 contract books > first-elimination and long-match books resolve to the canonical match facts and settle once 36ms
- ✓ tests/v2.test.ts > Exchange 2.0 contract books > a decided book locks trading before the match ends (no trading on known outcomes) 10ms
- ✓ tests/v2.test.ts > Exchange 2.0 contract books > spectator stepping produces the same canonical result as fast-forward 159ms
- ✓ tests/meta.test.ts > 10. rank rating updates > multi-player Elo is zero-sum and orders by placement 2ms
- ✓ tests/meta.test.ts > 10. rank rating updates > rating floors and ceilings protect progress 1ms
- ✓ tests/meta.test.ts > 11. promotion trials > passing promotes, failing keeps rank with a bounded penalty; wealth cannot buy rank 550ms
- ✓ tests/v2.test.ts > living world > news reflects canonical market results; seasons close into the Hall; population stays bounded 274ms
- ✓ tests/meta.test.ts > 12. dollar accounting & ledger > bankroll always equals the sum of ledger entries; no overdrafts; idempotent keys 260ms
- ✓ tests/meta.test.ts > 12. dollar accounting & ledger > match results cannot be collected twice 98ms
- ✓ tests/meta.test.ts > 13. forge transactions > buy, upgrade, sigil, fuse, dismantle with correct charges 21ms
- ✓ tests/meta.test.ts > 14. property transactions > buy/expand/sell with income and upkeep each day 7ms
- ✓ tests/meta.test.ts > 15/16. market pricing & execution > LMSR prices sum to 1, initial q reproduces priors, cost is path independent 1ms
- ✓ tests/meta.test.ts > 15/16. market pricing & execution > buying raises the price; round-trip loses money (no free arbitrage) 6ms
- ✓ tests/meta.test.ts > 17. position accounting > tracks cost basis, realized and unrealized P/L; no naked shorts 3ms
- ✓ tests/meta.test.ts > 18. contract settlement > settles exactly once to the canonical match winner and updates rival careers 66ms
- ✓ tests/meta.test.ts > 18. contract settlement > market maker loss stays within the LMSR bound 162ms
- ✓ tests/meta.test.ts > 19. cancellation & refunds > refunds the open cost basis exactly once 2ms
- ✓ tests/meta.test.ts > 19. cancellation & refunds > trading is locked while a hand is being played 4ms
- ✓ tests/meta.test.ts > 23. bankruptcy recovery > a broke player can always play free recovery matches and rebuild 100ms
- ✓ tests/v2.test.ts > living world > bankrupt rivals retire and are replaced, with news 3ms
- ✓ tests/v2.test.ts > living world > player reputation accumulates only observable statistics and feeds AI memory 77ms
- ✓ tests/v2.test.ts > Arsenal 2.0 > 76+ abilities over 10 archetypes; random loadouts from the full set conserve chips 562ms
- ✓ tests/v2.test.ts > Arsenal 2.0 > named combos activate only with all pieces; Caesar's Ascension needs two legendaries 1ms
- ✓ tests/v2.test.ts > Arsenal 2.0 > cooldowns block re-arming until enough hands pass 2ms
- ✓ tests/poker.test.ts > 1. hand rankings > ranks every category in order 3ms
+ ✓ tests/arsenal.test.ts > 9. AI information boundaries > AI view contains no opponent hole cards and decisions ignore hidden cards 3ms
+ ✓ tests/arsenal.test.ts > 9. AI information boundaries > AI-only matches are deterministic for a seed 61ms
+ ✓ tests/meta.test.ts > 10. rank rating updates > multi-player Elo is zero-sum and orders by placement 5ms
+ ✓ tests/meta.test.ts > 10. rank rating updates > rating floors and ceilings protect progress 0ms
+ ✓ tests/meta.test.ts > 11. promotion trials > passing promotes, failing keeps rank with a bounded penalty; wealth cannot buy rank 264ms
+ ✓ tests/v3.test.ts > Legendary Arsenal (rule engine) > 3.0 combos activate only with all three pieces 0ms
+ ✓ tests/v3.test.ts > AI 3.0 information boundaries > bet-size memory only uses public showdown observations and is pattern-relative 0ms
+ ✓ tests/v3.test.ts > AI 3.0 information boundaries > AI views contain no hidden cards (3.0 fields included) 5ms
+ ✓ tests/v3.test.ts > trophies & awards > a player win at a final table awards a trophy, title, timeline entry, Hall (grand) and the champion achievement 1925ms
+ ✓ tests/meta.test.ts > 12. dollar accounting & ledger > bankroll always equals the sum of ledger entries; no overdrafts; idempotent keys 519ms
+ ✓ tests/meta.test.ts > 12. dollar accounting & ledger > match results cannot be collected twice 91ms
+ ✓ tests/meta.test.ts > 13. forge transactions > buy, upgrade, sigil, fuse, dismantle with correct charges 12ms
+ ✓ tests/poker.test.ts > 1. hand rankings > ranks every category in order 4ms
  ✓ tests/poker.test.ts > 1. hand rankings > handles the wheel straight and royal flush 1ms
  ✓ tests/poker.test.ts > 1. hand rankings > picks best two pair and kickers 0ms
  ✓ tests/poker.test.ts > 1. hand rankings > full house picks highest trips + best pair from two trips 0ms
@@ -65,17 +72,28 @@
  ✓ tests/poker.test.ts > 3. betting legality > big blind gets the option when limped to 1ms
  ✓ tests/poker.test.ts > 3. betting legality > incomplete all-in raise does not reopen betting 1ms
  ✓ tests/poker.test.ts > 4/5. side pots & all-in > builds correct main and side pots 1ms
- ✓ tests/poker.test.ts > 4/5. side pots & all-in > multi-way all-in settles with exact chip conservation over many seeds 27ms
+ ✓ tests/poker.test.ts > 4/5. side pots & all-in > multi-way all-in settles with exact chip conservation over many seeds 43ms
  ✓ tests/poker.test.ts > 4/5. side pots & all-in > returns uncalled bets 0ms
  ✓ tests/poker.test.ts > 6. tournament elimination > eliminates busted players, orders placements, and finishes 0ms
  ✓ tests/poker.test.ts > 6. tournament elimination > heads-up: dealer posts the small blind 0ms
- ✓ tests/save.test.ts > 20. save / load > detects corruption and tampering 6ms
- ✓ tests/save.test.ts > 20. save / load > migrates older schema versions 3ms
- ✓ tests/save.test.ts > 20. save / load > IndexedDB two-slot save survives a corrupted primary slot 14ms
- ✓ tests/save.test.ts > 24. long-running simulation > a 40-match career keeps every invariant 3031ms
+ ✓ tests/meta.test.ts > 14. property transactions > buy/expand/sell with income and upkeep each day 5ms
+ ✓ tests/meta.test.ts > 15/16. market pricing & execution > LMSR prices sum to 1, initial q reproduces priors, cost is path independent 1ms
+ ✓ tests/meta.test.ts > 15/16. market pricing & execution > buying raises the price; round-trip loses money (no free arbitrage) 12ms
+ ✓ tests/meta.test.ts > 17. position accounting > tracks cost basis, realized and unrealized P/L; no naked shorts 5ms
+ ✓ tests/meta.test.ts > 18. contract settlement > settles exactly once to the canonical match winner and updates rival careers 72ms
+ ✓ tests/meta.test.ts > 18. contract settlement > market maker loss stays within the LMSR bound 249ms
+ ✓ tests/meta.test.ts > 19. cancellation & refunds > refunds the open cost basis exactly once 5ms
+ ✓ tests/meta.test.ts > 19. cancellation & refunds > trading is locked while a hand is being played 7ms
+ ✓ tests/meta.test.ts > 23. bankruptcy recovery > a broke player can always play free recovery matches and rebuild 143ms
+ ✓ tests/v2.test.ts > living world > news reflects canonical market results; seasons close into the Hall; population stays bounded 19047ms
+ ✓ tests/v2.test.ts > living world > bankrupt rivals retire and are replaced, with news 4ms
+ ✓ tests/v2.test.ts > living world > player reputation accumulates only observable statistics and feeds AI memory 70ms
+ ✓ tests/v2.test.ts > Arsenal 2.0 > 76+ abilities over 10 archetypes; random loadouts from the full set conserve chips 407ms
+ ✓ tests/v2.test.ts > Arsenal 2.0 > named combos activate only with all pieces; Caesar's Ascension needs two legendaries 1ms
+ ✓ tests/v2.test.ts > Arsenal 2.0 > cooldowns block re-arming until enough hands pass 2ms
 
- Test Files  5 passed (5)
-      Tests  72 passed (72)
-   Start at  22:34:03
-   Duration  4.77s (tests 96%, import 2%, transform 2%)
+ Test Files  6 passed (6)
+      Tests  90 passed (90)
+   Start at  00:26:40
+   Duration  22.42s (tests 99%, import 1%)
 

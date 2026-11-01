@@ -236,11 +236,15 @@ function botsTradeBook(m: Market, B: Book, fair: number[], rounds: number) {
       const bs = belief.reduce((a, b) => a + b, 0) || 1;
       const nb = belief.map(x => x / bs);
       // pick the most mispriced outcome from this bot's view
-      let best = 0, edge = -1;
-      for (let i = 0; i < nOut; i++) { const e = Math.abs(nb[i] - p[i]); if (e > edge) { edge = e; best = i; } }
+      // choose the best *actionable* edge: buy an underpriced outcome, or sell an overpriced one we hold
+      let best = -1, edge = 0, wantUp = true;
+      for (let i = 0; i < nOut; i++) {
+        const e = nb[i] - p[i];
+        if (e > edge) { edge = e; best = i; wantUp = true; }
+        else if (-e > edge && hold[i] > 0) { edge = -e; best = i; wantUp = false; }
+      }
       const minEdge = bot.strategy === 'conservative' ? 0.06 : bot.strategy === 'speculative' ? 0.015 : 0.025;
-      if (edge < minEdge) continue;
-      const wantUp = nb[best] > p[best];
+      if (best < 0 || edge < minEdge) continue;
       const target = p[best] + (nb[best] - p[best]) * (bot.strategy === 'speculative' ? 0.8 : 0.5);
       let sh = Math.round(sharesToPrice(B.q, B.b, best, target));
       if (!wantUp) {
@@ -257,7 +261,7 @@ function botsTradeBook(m: Market, B: Book, fair: number[], rounds: number) {
       const cents = sh > 0 ? Math.ceil(c * 100) : Math.floor(c * 100);
       const fee = Math.ceil(Math.abs(cents) * FEE_RATE);
       hold[best] += sh;
-      bot.spent += cents / 100 + fee / 100;
+      bot.spent = Math.max(0, bot.spent + cents / 100 + fee / 100);
       bot.pnl = (bot.pnl ?? 0) - cents - fee;
       B.q[best] += sh; B.mmCash += cents / 100;
       m.tick++;

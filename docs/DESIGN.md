@@ -111,3 +111,33 @@ Villa (rent), Augur's Library (Exchange research), Card Club (Club Nights), Trai
 * One canonical write path (`recordWorldMatch`) updates rival careers, season points and reputation for every fully simulated match (yours, Exchange matches, tournament heats). Background bouts are statistical and are labelled as such.
 * News is generated only from those writes: promotions/demotions, upsets (winner priced < 17%), market results, tournaments, seasons, bankruptcies, retirements and rookies.
 * Seasons last 15 days. Points per placement: 10 / 6 / 3 / 1 (Quick Clash and background bouts ×0.5, Imperial Tournament finals ×2). Player rewards: champion 20× entry, top 3 8×, top 10 3×.
+
+# 3.0 — The Eternal Empire additions
+
+## The Imperial Circuit (`src/core/circuit.ts`)
+* **Calendar** (rolling 6 days, seeded from the world seed): Local event every 3rd day (your rank ±1), Regional every 5th (rank band of three), and every 7th day an Invitational (top-rated rivals; you are invited at your rank's threshold rating), a High-Roller Festival (5× buy-in) or a Rival Revenge Night (your fiercest rivals). Each season, a **Last Chance Qualifier** three days before the end, open to everyone outside the top 16, awards the playoff wildcard.
+* **Format:** 16 players, four 4-seat heats (random tables; playoffs use snake seeding 1-8-9-16 …), heat winners form the final table. Tournament chips are separate from Dollars.
+* **Prize split of the pool** (16 entries + purse): champion 35%, runner-up 18%, 3rd 11%, 4th 8%, each heat 2nd 4%, each heat 3rd 3% = **100%** (verified in tests with a rounding tolerance of a few cents). A Championship Venue owner takes a hosting fee out of the pool (not on top of it).
+* **Eligibility & registration:** opens 2 days before the event; the entry is charged on registration. The lowest-rated entrant gives up their seat to you. **No-show rule:** if you do not take your seat within 3 days of the event day, an alternate replaces you and the entry is not refunded.
+* **Seasons (15 days) → playoffs:** regular-season points come from every recorded match plus circuit finishes. At season end the top 16 (and the wildcard) qualify for the **Imperial Grand Championship**, scheduled immediately. Its champion — not the points leader — enters the **Hall of Champions**. Regular-season awards for the player: 8× / 4× / 2× entry for points-leader / top 3 / top 10.
+* **One canonical write path:** each table is simulated once; that result feeds the bracket record, rival careers (titles), season points, news, the champion market settlement and the Hall. Integrity tests check all of them agree.
+* **Replays & highlights:** every table stores its per-hand stack history and highlights (biggest pot, eliminations, bluffs) for hand-by-hand replay in the bracket viewer.
+
+## AI 3.0 (`src/core/ai.ts`)
+* **Bet-size memory:** every showdown records whether the shown hand followed a big (≥ ¾ pot) or small post-flop bet and whether it was strong (two pair or better). Facing a bet, the AI compares the strength rate for that size bucket against the same opponent's overall showdown strength (empirical-Bayes shrinkage) and adjusts its calling margin only for a genuine *pattern*.
+* **Push/fold** at ≤ 12 BB: calls shoves on true pot odds against the shover's public range; widens shoves against opponents who fold often.
+* **Stack-commitment discipline:** avoids committing > 60% of its stack with marginal equity.
+* **Personalities:** aggressive rivals bluff more into passive tables; conservative rivals bluff less and punish shown bluffers; tournament specialists tighten near elimination; combo specialists read visible loadouts (v2).
+* Information boundary unchanged: own cards, the board, public actions/sizes, and shown-down hands only.
+
+## Legendary Arsenal rule engine (`src/core/abilities3.ts`, `arsenal3.ts`)
+Rule = **trigger** (win, winShowdown, winUncontested, loseShowdown, foldPre, foldPost, allinWin, multiwayWin, riverWin, multiStreetWin, bigPotWin, checkRaiseWin, threeBetWin, handStart, elimination, survive) + **conditions** (stack ≤/≥ X BB, players left ≤ N, hand ≥ N, armed, streak ≥ N, late blind level, chip leader/not, weak/high-card-only hands) + **effect** (tribute to losers/folders/showdown losers/river bettors/leader, restitution, Resolve, Ward, waiver, reward %) with an optional second effect. Each ability triggers at most once per evaluation (stacking limit); per-hand tribute caps, Wards and Vetoes apply unchanged; replay is deterministic (tested).
+
+## Grand Exchange
+* **Tournament champion markets:** 16-outcome LMSR (b = 150) on every scheduled circuit event; closes when play starts; settles once to the canonical final-table winner. You cannot trade an event you entered or that includes a rival you sponsor.
+* **Limit orders** (match markets, every book): buy orders reserve ⌈qty × limit × 1.02⌉ in escrow; sell orders reserve contracts; fills only between hands and only up to the quantity that keeps the marginal price at the limit (natural partial fills); cancel / expire (chosen hand, match end, settlement, early book lock) releases unused escrow exactly once.
+* **Priors:** pre-match priors are now the fitted, near-uniform rating model and live fair value is chip share^0.8 — both chosen from the out-of-sample study in `MARKET_CALIBRATION.md`.
+
+## Dynasty
+* **Sponsorships** (needs a Sponsorship Office; level + 1 concurrent contracts): pay an upfront fee (2× the rival's rank entry × form factor) directly to the rival; for 10 days receive 30% of every prize they win (circuit, Exchange matches, background bouts), paid out of their winnings. You cannot trade markets involving a sponsored rival; their decisions remain their own.
+* **Championship Venue** (3 levels): hosts circuit events up to its tier and takes a 4–6% hosting fee from those pools (+1% with *Profit* focus; *Prestige* focus gives +150 Glory per hosted event instead).

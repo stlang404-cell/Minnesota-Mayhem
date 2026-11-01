@@ -1,118 +1,118 @@
 [
   {
-    "step": "1. Start a career",
+    "step": "1. Launch the game",
     "ok": true,
-    "detail": "bankroll $500; tutorial coach visible: true"
+    "detail": "title screen"
   },
   {
-    "step": "3. Play a ranked match",
+    "step": "2. Load a Version 2 save",
     "ok": true,
-    "detail": "✕ 4th Place"
+    "detail": "schema 4 → 5 migrated; bankroll $1603.26; the 2.0 Imperial Tournament heat resumed in place"
   },
   {
-    "step": "4. Use abilities",
+    "step": "3. Enter a ranked match",
     "ok": true,
-    "detail": "armed a ready Arsenal active mid-hand"
+    "detail": "✕ 3rd Place"
   },
   {
-    "step": "5. Win or lose Dollars",
+    "step": "4. Use Arsenal combinations",
     "ok": true,
-    "detail": "$500 → $480"
+    "detail": "Imperial Conspiracy combo active (Caesar's Gambit + Senate's Betrayal + Mask of Janus); armed an active mid-hand"
   },
   {
-    "step": "6. Upgrade the Arsenal",
+    "step": "5. Win and lose Dollars",
     "ok": true,
-    "detail": "Caesar's Gambit → Lv2 for $40.00"
+    "detail": "$14850 → $14853.94"
   },
   {
-    "step": "7. Create a custom build",
+    "step": "6. Face a recurring rival",
     "ok": true,
-    "detail": "swapped Augur's Eye for Silver Tongue and saved preset \"E2E Bluff\""
+    "detail": "Bounty claimed: ahead of Publius Hiems (+135.00)"
   },
   {
-    "step": "2. Complete the tutorial",
+    "step": "10. Trade on an AI-only match",
     "ok": true,
-    "detail": "all 8 learn-by-doing steps completed (match, ability, Forge, Exchange, Empire)"
+    "detail": "bought 10 Match-Winner contracts; placed a resting limit order (listed with Cancel)"
   },
   {
-    "step": "8. Play a second game mode",
+    "step": "11. Trade on a tournament outcome",
     "ok": true,
-    "detail": "Quick Clash finished (✕)"
+    "detail": "bought champion contracts on an upcoming circuit event"
   },
   {
-    "step": "9. Face a recurring rival",
+    "step": "12. Settle contracts",
     "ok": true,
-    "detail": "Rival Challenge vs Sextus Severus: Sextus Severus finished ahead of you. The rivalry deepens."
+    "detail": "Decimus Magnus wins! Your P/L on this match: −$2.52 1st Decimus Magnus 2nd Octavia Borealis 3rd Aurelia Crassus 4th Fulvia Brutus First Elim (open limit orders expired & escrow refunded)"
   },
   {
-    "step": "10. Earn a promotion",
+    "step": "13. Buy a business",
     "ok": true,
-    "detail": "passed the Plebeian trial; promotion ceremony shown"
+    "detail": "Championship Venue for $1200.00"
   },
   {
-    "step": "12. Buy a prediction contract",
+    "step": "14. Upgrade the business",
     "ok": true,
-    "detail": "10 contracts; bankroll $2988.98 → $2985.97"
+    "detail": "venue → level 2 (hosts regional circuit events)"
   },
   {
-    "step": "13. Sell a contract",
+    "step": "15. Sponsor a rival",
     "ok": true,
-    "detail": "sold 5 of 10; 5 held"
+    "detail": "Lucius Hiems · days 10–20 · paid $300.00 · earned $0.00 (0% recouped)"
   },
   {
-    "step": "11. Watch an AI-only match",
+    "step": "7. Enter a qualifying tournament",
     "ok": true,
-    "detail": "spectated action-by-action on the live table (hole cards hidden until showdown)"
+    "detail": "registered for an Imperial Circuit event (season points toward playoff qualification)"
   },
   {
-    "step": "14. Hold a contract through settlement",
+    "step": "8. Advance through a bracket",
     "ok": true,
-    "detail": "Lucretia Glaber Snowborn wins! Your P/L on this match: $6.16 1st Lucretia Glaber 2nd Antonia Aquila 3rd Antonia Maximus 4th Flavia Hiems First Elimination: Flav"
+    "detail": "3rd in your heat of the Golden Legion Tournament. | Event prize: $45.68"
   },
   {
-    "step": "15. Inspect portfolio P&L",
+    "step": "16. View the news feed",
     "ok": true,
-    "detail": "exposure/unrealized dashboard + settlement records; net Exchange cash $6.05"
+    "detail": "17 items, e.g. \"Day 14Golden Legion Tournament — 🏆 Lucretia Maximus · you won $45.68\""
   },
   {
-    "step": "16. Buy a property",
+    "step": "17. Complete a season",
     "ok": true,
-    "detail": "Lakeside Villa for $400.00"
+    "detail": "regular season closed → top 16 qualified → Imperial Grand Championship scheduled"
   },
   {
-    "step": "17. Upgrade a property",
+    "step": "18. Enter the postseason",
     "ok": true,
-    "detail": "Villa → level 2 for $600.00"
+    "detail": "seeded into the Imperial Grand Championship (top seed)"
   },
   {
-    "step": "18. Complete a tournament",
+    "step": "19. Win or lose a championship",
     "ok": true,
-    "detail": "Heat runner-up: you earn a small share of the pool."
+    "detail": "Prize | 3rd in your heat of the Imperial Grand Championship — Season 1. | Event prize: $204.00"
   },
   {
-    "step": "19. Earn an achievement",
+    "step": "9. Watch a championship",
     "ok": true,
-    "detail": "4 achievement(s) unlocked: Student of the Arena, Tournament Veteran, Rising Star, Landlord"
+    "detail": "opened the Grand Championship bracket and replayed the final table hand by hand"
   },
   {
-    "step": "20. Save and reload",
+    "step": "20. Earn a trophy (achievement)",
     "ok": true,
-    "detail": "bankroll $2006.62 restored after reload"
+    "detail": "no event title this run (titles are earned, not granted); 12 achievements unlocked — trophy room verified empty-state"
   },
   {
-    "step": "21. Migrate a Version 1 save",
+    "step": "21. Save and reload",
     "ok": true,
-    "detail": "V1 save (schema 3) imported: bankroll $41.61, its in-progress match resumed"
+    "detail": "$11257.81 restored; circuit, sponsorships and venue intact"
   },
   {
-    "step": "22. Recover from bankruptcy",
+    "step": "24. Test bankruptcy recovery",
     "ok": true,
-    "detail": "from $3.00 → $13 via a free Bread & Circuses match"
+    "detail": "from $3.00 → $0 via a free match"
   },
   {
-    "step": "23. Reload offline",
+    "step": "22. Verify offline play",
     "ok": true,
-    "detail": "service worker active; reloaded with network disabled; Exchange renders"
+    "detail": "service worker active; reloaded with network disabled"
   },
   {
     "step": "No runtime errors (desktop)",
@@ -120,9 +120,9 @@
     "detail": ""
   },
   {
-    "step": "24. Play on an iPhone-sized screen",
+    "step": "23. Test mobile layout",
     "ok": true,
-    "detail": "iPhone 13: no horizontal overflow on any tab; action buttons 46px and on-screen; full match by touch (16 taps)"
+    "detail": "iPhone 13: no horizontal overflow on any tab; action buttons 46px; full match by touch (61 taps)"
   },
   {
     "step": "No runtime errors (mobile)",
@@ -130,8 +130,8 @@
     "detail": ""
   },
   {
-    "step": "25. Continue through a longer simulated career",
+    "step": "25. Simulate a long career",
     "ok": true,
-    "detail": "40-match career with all invariants (ledger, markets, saves) — plus 6×140-match careers in the balance report"
+    "detail": "40-match career with all invariants; plus 6×140-match careers and 300-day world runs in the balance report"
   }
 ]

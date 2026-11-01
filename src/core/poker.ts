@@ -55,7 +55,7 @@ export interface TableConfig {
 
 export const DEFAULT_CONFIG: TableConfig = {
   startingStack: 1500,
-  handsPerLevel: 5,
+  handsPerLevel: 6,
   levels: [
     { sb: 10, bb: 20, ante: 0 },
     { sb: 15, bb: 30, ante: 0 },

@@ -44,7 +44,7 @@ const winsBy: Record<string, Record<number, { w: number; n: number }>> = {};
 for (const tier of tiers) {
   const N = 240;
   for (let k = 0; k < N; k++) {
-    const rng = new Rng(9000 + tier * 1000 + k);
+    const rng = new Rng(9000 + tier * 1000 + k + Number(process.env.BAL_SEED ?? 0));
     const styles = rng.shuffle(ARCHETYPES.map(a => a.id)).slice(0, 4) as Archetype[];
     const players = styles.map((s, i) => ({ id: s, name: s, isHuman: false, loadout: styleLoadout(s, tier), profile: { ...makeProfile('discipline', tier, rng), aggression: 0.5, bluff: 0.25, tightness: 0.5, risk: 0.5, adaptation: 0.5 } }));
     const m = createMatch(players, rng.nextU32());
@@ -98,6 +98,9 @@ for (let c = 0; c < CAREERS; c++) {
   let wasBroke = false;
   for (let i = 1; i <= MATCHES; i++) {
     const opts = G.arenaOptions(g);
+    // a real player takes the seat they qualified for (playoffs / registered circuit events)
+    const ready = g.circuit.events.find(e => e.playerEntered && e.status !== 'done' && g.day >= e.day && e.heats.length === 0);
+    if (ready && !C.playEvent(g, ready.id)) { while (g.active) { const m = g.active.match; let s = 0; while (!m.done && s++ < 50000) { if (!step(m)) { const h = humanTurn(m); if (h >= 0) G.playerAct(g, decide(buildView(m, h), G.PLAYER_PROFILE, rng).action); } } G.finishActiveMatch(g); } continue; }
     const pick = opts.find(o => o.kind === 'trial' && o.available) ?? opts.find(o => o.kind === 'arena' && o.available) ?? opts.find(o => o.kind === 'recovery' && o.available);
     if (!pick) break;
     if (pick.kind === 'recovery') { recoveryMatches++; if (!wasBroke) { bankruptEvents++; wasBroke = true; } }

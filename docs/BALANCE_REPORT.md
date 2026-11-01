@@ -1,27 +1,29 @@
-# Minnesota Mayhem 2.0 (Imperial Ascension) — Balance Report
-Generated 2026-10-31T22:03:13.611Z by `npm run balance` (seeded, reproducible).
+# Minnesota Mayhem 3.0 (The Eternal Empire) — Balance Report
+Generated 2026-11-01T00:10:35.668Z by `npm run balance` (seeded, reproducible).
 
 ## 1. Match duration & archetype win rates (AI-only, 4 archetypes per table)
-Matches simulated: 720. Hands per match: mean 37.3, median 38, p10 28, p90 45, max 56.
-Estimated human duration at 4.5s/hand: median 2.9 min (p10 2.1, p90 3.4). Target 3–6 min.
+Matches simulated: 720. Hands per match: mean 39.7, median 41, p10 32, p90 46, max 56.
+Estimated human duration at 4.5s/hand: median 3.1 min (p10 2.4, p90 3.5). Target 3–6 min.
 Hand-cap finishes: 0 (the documented chip-count safety rule).
 
 Identical AI personalities; only the 5-ability archetype loadout differs (10 archetypes, 4 drawn per table). Fair share = 25%.
 
 | Archetype | Peasant tier | Centurion tier | Imperator tier |
 |---|---|---|---|
-| Bluff | 20.2% (n=89) | 27.0% (n=111) | 23.2% (n=99) |
-| Pressure | 30.8% (n=104) | 22.5% (n=89) | 25.9% (n=108) |
-| Discipline | 25.2% (n=103) | 26.1% (n=92) | 36.5% (n=96) |
-| Counterplay | 22.1% (n=95) | 20.4% (n=98) | 28.7% (n=80) |
-| Momentum | 21.8% (n=87) | 24.2% (n=95) | 18.9% (n=95) |
-| Economy | 25.0% (n=96) | 23.4% (n=94) | 25.3% (n=99) |
-| Comeback | 33.7% (n=101) | 30.9% (n=97) | 25.8% (n=97) |
-| Information | 23.1% (n=104) | 18.2% (n=88) | 21.4% (n=103) |
-| Tournament | 21.4% (n=84) | 33.0% (n=94) | 24.7% (n=77) |
-| Tactical | 24.7% (n=97) | 23.5% (n=102) | 20.8% (n=106) |
+| Bluff | 25.8% (n=89) | 26.1% (n=111) | 24.2% (n=99) |
+| Pressure | 21.2% (n=104) | 21.3% (n=89) | 30.6% (n=108) |
+| Discipline | 29.1% (n=103) | 26.1% (n=92) | 37.5% (n=96) |
+| Counterplay | 28.4% (n=95) | 27.6% (n=98) | 27.5% (n=80) |
+| Momentum | 27.6% (n=87) | 22.1% (n=95) | 18.9% (n=95) |
+| Economy | 22.9% (n=96) | 25.5% (n=94) | 21.2% (n=99) |
+| Comeback | 26.7% (n=101) | 29.9% (n=97) | 30.9% (n=97) |
+| Information | 21.2% (n=104) | 17.0% (n=88) | 21.4% (n=103) |
+| Tournament | 17.9% (n=84) | 27.7% (n=94) | 19.5% (n=77) |
+| Tactical | 28.9% (n=97) | 25.5% (n=102) | 17.9% (n=106) |
 
 ⚠ Archetypes above 36%: Discipline@Imperator
+
+_Section 1 re-run after Discipline tuning (Frozen Legion L3 0.40→0.33, Fortress Wall L3 0.45→0.38 and 3→2 uses, Iron Discipline L3 needs 3 folds). Fresh-seed checks (seed offsets 50000 and 90000, before the final Fortress Wall change) showed Discipline@Imperator at 37.3% and 39.8%: a real but moderate top-tier strength; Discipline is 25–29% at the other tiers._
 
 ## 2. Career progression (simulated competent player, full game rules)
 The "player" is driven by the same AI decision engine (skill 0.7, balanced profile) and uses arena / trial / recovery choices automatically. It buys one new ability every few matches and a Villa once affordable.
@@ -32,110 +34,136 @@ Careers: 6 × 140 matches.
 |---|---|---|
 | Peasant | 6/6 | 0 |
 | Plebeian | 6/6 | 15 |
-| Gladiator | 6/6 | 36 |
-| Centurion | 6/6 | 57 |
-| Praetor | 6/6 | 81 |
-| Consul | 6/6 | 116 |
-| Imperator | 4/6 | 90 |
-| Caesar | 3/6 | 103 |
-| Augustus | 2/6 | 125 |
+| Gladiator | 6/6 | 43 |
+| Centurion | 6/6 | 67 |
+| Praetor | 6/6 | 71 |
+| Consul | 3/6 | 72 |
+| Imperator | 3/6 | 100 |
+| Caesar | 1/6 | 112 |
+| Augustus | 1/6 | 118 |
 
-Final ranks after 140 matches: Augustus, Augustus, Consul, Caesar, Imperator, Consul.
-Promotion trials: 39/71 passed (55%).
-Bankroll (median across careers) after 10/40/80/140 matches: $479.46 / $973.90 / $4168.32 / $18174.84.
+Final ranks after 140 matches: Augustus, Praetor, Imperator, Praetor, Imperator, Praetor.
+Promotion trials: 32/54 passed (59%).
+Bankroll (median across careers) after 10/40/80/140 matches: $450.48 / $535.00 / $2899.15 / $6673.09.
 Low-bankroll episodes: 0; recovery matches played: 0; episodes fully recovered: 0.
 
 ## 3. Bankruptcy & recovery (deliberately weak player)
 Scenario: a timid, low-skill player who has fallen to $10 (below the $20 entry). Went broke in 5 episodes across 4 careers × 60 matches; a playable match was available every single time (never stuck).
-Recovery matches needed to afford a ranked entry again: median 1, max 1.
+Recovery matches needed to afford a ranked entry again: median 1, max 2.
 
 ## 4. Arena Exchange profitability
 Each strategy buys 20 contracts pre-match in each of 150 markets (fees included).
 
 | Strategy | Markets traded | Total P/L | P/L per market | Win % |
 |---|---|---|---|---|
-| Always buy the favourite | 150 | $-265.79 | $-1.77 | 21% |
-| Always buy the longshot | 150 | $227.05 | $1.51 | 29% |
-| Random outcome | 150 | $-96.17 | $-0.64 | 23% |
-| Fair-value edge (Library model, only if edge > 4¢) | 4 | $-18.63 | $-4.66 | 0% |
+| Always buy the favourite | 150 | $-149.84 | $-1.00 | 24% |
+| Always buy the longshot | 150 | $-107.50 | $-0.72 | 21% |
+| Random outcome | 150 | $-79.61 | $-0.53 | 24% |
+| Fair-value edge (Library model, only if edge > 4¢) | 4 | $2.02 | $0.51 | 25% |
 
-Market maker (per market, incl. simulated traders): mean net $-109.03, worst $-182.51; LMSR loss-bound violations: 0. Cancelled (withdrawal) markets refunded: 32.
+Market maker (per market, incl. simulated traders): mean net $-99.76, worst $-160.44; LMSR loss-bound violations: 0. Cancelled (withdrawal) markets refunded: 16.
 Fees (2%) and house-favouring rounding make naive strategies lose slowly; research-driven trading can profit only when the crowd misprices. There is no guaranteed-profit loop.
 
-## 6. AI benchmark (AI 2.0 vs Version 1 AI and baseline strategies)
-Two seats of each policy per table (seats alternate), no Arsenal, identical personality parameters. Win share = wins ÷ total wins of the two policies.
+## 6. AI benchmark (AI 3.0 vs AI 2.0, Version 1 and baselines; 95% confidence intervals)
+Two seats of each policy per table (seats alternate), no Arsenal, identical personality parameters. "Memory" carries each seat's public reputation (incl. bet-size memory) across matches. Win share = wins ÷ (wins of both policies).
 
-| Opponent policy | Matches | AI 2.0 win share | AI 2.0 avg place | Opponent avg place | AI 2.0 postflop bets+raises per decision | CPU ms / decision |
-|---|---|---|---|---|---|---|
-| Version 1 AI | 400 | 56.0% | 2.47 | 2.53 | 0.080 | 0.16 |
-| station | 150 | 92.0% | 1.70 | 3.30 | 0.123 | 0.14 |
-| rock | 150 | 91.3% | 2.29 | 2.71 | 0.084 | 0.15 |
-| maniac | 150 | 67.3% | 1.93 | 3.07 | 0.089 | 0.14 |
-| random | 150 | 82.0% | 1.98 | 3.02 | 0.106 | 0.14 |
+| Matchup | Matches | AI 3.0 win share [95% CI] | AI 3.0 avg place | Opponent avg place | CPU ms / decision |
+|---|---|---|---|---|---|
+| AI 2.0 (with memory) | 800 | 54.4% [50.9, 57.8] | 2.474 | 2.526 | 0.16 |
+| AI 2.0 (no memory) | 800 | 58.0% [54.6, 61.4] | 2.449 | 2.551 | 0.16 |
+| Version 1 AI | 400 | 64.5% [59.8, 69.2] | 2.442 | 2.558 | 0.16 |
+| station | 150 | 94.7% [91.1, 98.3] | 1.657 | 3.343 | 0.15 |
+| rock | 150 | 92.0% [87.7, 96.3] | 2.290 | 2.710 | 0.16 |
+| maniac | 150 | 73.3% [66.3, 80.4] | 1.880 | 3.120 | 0.16 |
+| random | 150 | 89.3% [84.4, 94.3] | 1.913 | 3.087 | 0.15 |
+| Null test: AI 2.0 vs itself (memory) | 800 | 51.7% [48.3, 55.2] | 2.467 | 2.533 | — |
 
-Exploitability indicator: a policy that cannot be exploited by simple fixed strategies should beat all of them; AI 2.0 must also beat Version 1 to justify the upgrade.
+Interpretation: an improvement is claimed only when the 95% interval excludes 50%. The null test shows the harness's own noise.
 
 ## 7. Combo & fusion strength (one build vs three random archetype builds)
 Fair share = 25%. n = 200 matches per build, seats rotated, opponents draw 5-ability archetype builds at level 2.
 
 | Build | Win rate | Avg place |
 |---|---|---|
-| Imperial Conspiracy | 24.0% | 2.44 |
-| Golden Legion | 28.0% | 2.37 |
-| Frozen Empire | 24.5% | 2.39 |
-| Senate Collapse | 24.5% | 2.44 |
-| Caesar's Ascension (Ides of March + Wrath of Mars) | 27.5% | 2.38 |
-| Iron Executioner (fusion) | 25.0% | 2.44 |
-| Eternal Flame (fusion) | 30.5% | 2.34 |
-| Phantom Tempo (fusion) | 27.0% | 2.33 |
-| Oracle's Ledger (fusion) | 26.5% | 2.40 |
-| No abilities (control) | 27.5% | 2.40 |
+| Imperial Conspiracy | 23.5% | 2.48 |
+| Golden Legion | 26.5% | 2.52 |
+| Frozen Empire | 30.5% | 2.23 |
+| Senate Collapse | 26.5% | 2.47 |
+| Emperor's Gambit | 24.5% | 2.50 |
+| Legion's Vow | 25.0% | 2.46 |
+| Golden Cabal | 22.5% | 2.52 |
+| Frozen Throne | 23.5% | 2.49 |
+| Senate Overturned | 23.0% | 2.48 |
+| Caesar's Ascension (Ides of March + Wrath of Mars) | 29.5% | 2.37 |
+| Iron Executioner (fusion) | 26.5% | 2.47 |
+| Eternal Flame (fusion) | 24.0% | 2.49 |
+| Phantom Tempo (fusion) | 22.5% | 2.48 |
+| Oracle's Ledger (fusion) | 24.5% | 2.46 |
+| No abilities (control) | 22.5% | 2.52 |
 
 No combo or fusion exceeds 36% against three full archetype builds.
 
 ## 8. Exchange calibration & simulated trader profitability
-Markets settled: 113. Brier score of the pre-match market price (lower is better; uninformed 4-way = 0.750, uninformed binary = 0.500):
-* Match Winner: 0.752 (n=113)
-* First Elimination: 0.750 (n=113)
-* Long Match O/U 40.5: 0.495 (n=113)
-* Match Winner priced live after hand 20: 0.717 (n=112) — public chip counts make live prices far more informative than pre-match ratings.
+Markets settled: 116. Brier score of the pre-match market price (lower is better; uninformed 4-way = 0.750, uninformed binary = 0.500):
+* Match Winner: 0.762 (n=116)
+* First Elimination: 0.751 (n=116)
+* Long Match O/U 40.5: 0.500 (n=116)
+* Match Winner priced live after hand 20: 0.678 (n=114) — public chip counts make live prices far more informative than pre-match ratings.
 
 | Trader strategy | Bot-markets | Total P/L | P/L per market |
 |---|---|---|---|
-| conservative | 113 | $1430.78 | $12.66 |
-| contrarian | 113 | $1304.93 | $11.55 |
-| fundamental | 226 | $5727.23 | $25.34 |
-| informed | 113 | $2766.11 | $24.48 |
-| momentum | 226 | $-4025.50 | $-17.81 |
-| noise | 113 | $132.18 | $1.17 |
-| speculative | 113 | $2123.19 | $18.79 |
-| whale | 113 | $4328.54 | $38.31 |
+| conservative | 116 | $2201.36 | $18.98 |
+| contrarian | 116 | $1348.77 | $11.63 |
+| fundamental | 232 | $4133.29 | $17.82 |
+| informed | 116 | $3523.41 | $30.37 |
+| momentum | 232 | $-2594.97 | $-11.19 |
+| noise | 116 | $82.62 | $0.71 |
+| speculative | 116 | $2589.94 | $22.33 |
+| whale | 116 | $3359.59 | $28.96 |
 
 ## 9. Mode economics (simulated competent player at Gladiator, 25 runs each)
 | Mode | Avg net $ per run | Avg hands per match | Notes |
 |---|---|---|---|
-| arena | $15.86 | 39.2 | baseline |
-| quick | $10.97 | 22.7 | half stakes, short stacks |
-| highroller | $64.13 | 39.3 | 4× entry, sharper rivals |
-| draft | $27.80 | 39.0 | temporary level-2 Arsenal |
-| rival | $58.97 | 40.1 | bounty for beating the rival |
-| gauntlet | $48.24 | 38.8 | cash out at stage 2 policy |
-| tournament | $-28.44 | 39.6 | 16 players, heats + final |
+| arena | $6.30 | 41.5 | baseline |
+| quick | $7.06 | 20.0 | half stakes, short stacks |
+| highroller | $127.98 | 42.2 | 4× entry, sharper rivals |
+| draft | $25.83 | 42.9 | temporary level-2 Arsenal |
+| rival | $53.84 | 42.8 | bounty for beating the rival |
+| gauntlet | $-3.60 | 42.2 | cash out at stage 2 policy |
+| tournament | $8.50 | 42.7 | 16 players, heats + final |
 
 ## 10. Long-run world stability (200 simulated days, no player matches)
-Rivals 121 → 135; total rival bankroll $312134.26 → $478754.70 (53.4%); mean rating 1375 → 1400; retirements 3; seasons closed 13; news items kept 120; save size 181 KB; 122 ms for 200 days.
+Rivals 121 → 136; total rival bankroll $323960.92 → $447611.26 (38.2%); mean rating 1377 → 1389; retirements 4; seasons closed 13; news items kept 120; save size 723 KB; 15177 ms for 200 days.
 
-## 11. Version 1 → Version 2 comparison
-V1 figures are copied from `docs/BALANCE_REPORT_V1.md` (generated before this update); V2 figures from this report.
+## 11. Version 2 → Version 3 comparison
+V2 figures from `docs/BALANCE_REPORT_V2.md` (archived before this update); V3 from this report and the code.
 
-| Metric | Version 1 | Version 2 |
+| Metric | Version 2 | Version 3 |
 |---|---|---|
-| Abilities / archetypes / fusions | 44 / 8 / 4 | 76 / 10 / 8 (+5 named combos) |
-| Game modes | Ranked, Trial, Recovery, Club, Grand | + Quick Clash, High Roller, Draft, Gauntlet, Rival Challenge, Daily, Imperial Tournament |
-| Rival population | 58 static (rebalanced to ≥4/rank) | ~120 with retirement, bankruptcy and rookies |
-| Exchange books per match | 1 (winner) | 3 (winner, first elimination, long match) |
-| Simulated trader strategies | 5 | 8 |
-| Automated tests | 56 | see TEST_RESULTS.txt |
+| Abilities / archetypes / legendary fusions / named combos | 76 / 10 / 8 / 5 | 122 / 10 / 16 / 10 (declarative rule engine) |
+| Competitive structure | 8 modes, points-only seasons | + Imperial Circuit (6 event tiers, calendar) and real seasonal playoffs (top 16 + wildcard → Grand Championship) |
+| AI | AI 2.0 | AI 3.0 (bet-size memory, push/fold vs ranges, stack discipline) — see §6 for CIs |
+| Exchange | 3 match books | + 16-outcome tournament champion markets, limit orders, recalibrated priors (see MARKET_CALIBRATION.md) |
+| Dynasty | properties | + sponsorship contracts, Championship Venue with hosting fees & focus |
+| Save schema | 4 | 5 (migrations from 3 and 4, tested on archived fixtures) |
+
+## 12. Investigation: Imperial Tournament expected value (V2 reported −$28.44 over 25 runs)
+**Mathematics.** Entry E (2× rank entry); pool = 16E + 2E purse = 18E. Payouts: final table 40/22/13/9% (84%) + four heat runners-up × 4% (16%) = 100% of the pool — verified in code (`TOURNAMENT_SPLIT`, `TOURNAMENT_RUNNER_UP`) and by the ledger test. An entrant of exactly average skill therefore expects 18E/16 = **1.125E back for an E entry: +12.5% of entry**. Variance is very high: 84% of the pool goes to 4 of 16 players.
+**Simulation.** 400 runs, simulated player at Gladiator (same AI engine as rivals, skill 0.7), entry $90.00: mean net $32.84 per run, 95% CI [$13.91, $51.76], standard deviation $193.08; cashed in 103/400 runs (26%). Theoretical average-skill expectation: +$11.25.
+
+**Conclusion.** The tournament is profitable on average for this player; the V2 negative mean was small-sample noise. The payout table was therefore left unchanged — risk and loss remain meaningful.
+
+## 13. Imperial Circuit, sponsorship and venue economics (120 simulated days)
+Events completed: 80 (regional 24, invitational 5, local 32, qualifier 8, grand 7, highroller 2, revenge 2); total prize pools $134460.00; seasons with a crowned Grand Champion: 7.
+Sponsorships: 12 contracts (one every 10 days), upfront paid $2415.60, revenue share received $2273.73 → net $-141.87 (-6% return). Sponsorship money moves between player and rival; nothing is created.
+Championship Venue (level 2, profit focus): hosting fees $5893.20 over 120 days (ledger window may truncate very old lines) vs $1920.00 upkeep and $3200.00 purchase cost.
+Simulation cost: 15673 ms for 120 days including every AI-only circuit event (131 ms/day).
+
+## 14. Performance profile
+* Full AI-only match (full Monte-Carlo AI, default iterations): 65 ms on this machine.
+* World day (background bouts + rival evolution + circuit events + markets): 77 ms average over 300 days.
+* Save size growth (bounded histories): day 100: 566 KB, day 200: 587 KB, day 300: 611 KB.
+* Heap after 300 simulated days: 59 MB (Δ -9 MB, includes GC noise). Rivals: 135; news kept: 120; circuit events kept: 28.
 
 ## 5. Property payback
 | Asset | Level | Cost | Net/day | Payback (days = arena matches) |
@@ -155,9 +183,12 @@ V1 figures are copied from `docs/BALANCE_REPORT_V1.md` (generated before this up
 | Sponsorship Office | 1 | $1500.00 | $-8.00 | utility (no income) |
 | Sponsorship Office | 2 | $2000.00 | $-12.00 | utility (no income) |
 | Imperial Estate | 1 | $5000.00 | $-25.00 | utility (no income) |
+| Championship Venue | 1 | $1200.00 | $-6.00 | utility (no income) |
+| Championship Venue | 2 | $2000.00 | $-10.00 | utility (no income) |
+| Championship Venue | 3 | $3200.00 | $-16.00 | utility (no income) |
 | Palace of the North Star | 1 | $2500.00 | $5.00 | 500 |
 | Palace of the North Star | 2 | $3500.00 | $10.00 | 350 |
 
-Maximum combined passive income with every asset fully developed: $110.00/day net, versus a $300 Augustus entry and $1,200 High Roller entry — property supplements but never replaces playing. Payback periods lengthen with each level (diminishing returns).
+Maximum combined passive income with every asset fully developed: $78.00/day net, versus a $300 Augustus entry and $1,200 High Roller entry — property supplements but never replaces playing. Payback periods lengthen with each level (diminishing returns).
 
-_Total harness runtime: 211s._
+_Total harness runtime: 627s._

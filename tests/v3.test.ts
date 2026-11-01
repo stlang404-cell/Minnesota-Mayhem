@@ -273,3 +273,31 @@ describe('AI 3.0 information boundaries', () => {
     expect(v.hole.some(c => others.includes(c))).toBe(false);
   });
 });
+
+describe('trophies & awards', () => {
+  it('a player win at a final table awards a trophy, title, timeline entry, Hall (grand) and the champion achievement', () => {
+    const g = rich(40);
+    g.season.points.player = 9999;
+    for (let d = 0; d < SEASON_LENGTH; d++) G.advanceDay(g);
+    const grand = g.circuit.events.find(e => e.tier === 'grand')!;
+    expect(C.playEvent(g, grand.id)).toBeNull();
+    // play the heat to completion, then resolve the stage through the real path with the canonical order
+    const a = g.active!; const m = a.match;
+    while (!m.done) { if (!step(m)) { const s = humanTurn(m); if (s >= 0) G.playerAct(g, { type: 'call' }); } }
+    // simulate the bracket path for a player who reached and won the final table
+    const notes: string[] = [];
+    const heatOrder = ['player', ...m.placementIds.filter(id => id !== 'player')];
+    expect(C.advanceCircuitMatch(g, a, heatOrder, notes)).toBe(false); // → final table starts
+    const fa = g.active!; const fm = fa.match;
+    while (!fm.done) { if (!step(fm)) { const s = humanTurn(fm); if (s >= 0) G.playerAct(g, { type: 'call' }); } }
+    const finalOrder = ['player', ...fm.placementIds.filter(id => id !== 'player')];
+    expect(C.advanceCircuitMatch(g, fa, finalOrder, notes)).toBe(true);
+    expect(g.trophies.some(t => t.tier === 'grand')).toBe(true);
+    expect(g.hall[g.hall.length - 1].championId).toBe('player');
+    expect(g.ceremony).toBe(100);
+    expect(g.timeline.some(t => t.text.includes('Won the'))).toBe(true);
+    G.checkAchievements(g);
+    expect(g.achievements).toContain('grand_champ');
+    expect(g.player.bankroll).toBe(ledgerSum(g));
+  });
+});

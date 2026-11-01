@@ -635,7 +635,7 @@ export function advanceDay(g: GameState) {
     }
     for (const ev of evolveRivals(g.rivals, rng)) news(g, ev.up ? 'promotion' : 'demotion', ev.up ? `${ev.name} is promoted to ${RANKS[ev.rank].name}.` : `${ev.name} drops to ${RANKS[ev.rank].name}.`, [ev.id]);
     retireAndReplace(g, rng);
-    if (g.rivals.length < 135) rebalancePopulation(g.rivals, rng);
+    rebalancePopulation(g.rivals, rng, g.rivals.length < 135 ? 12 : 4);
     rivalUpkeep(g);
   });
   circuitTick(g);

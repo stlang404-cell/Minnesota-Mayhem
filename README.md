@@ -1,23 +1,30 @@
-# MINNESOTA MAYHEM 2.0 — *IMPERIAL ASCENSION*
+# MINNESOTA MAYHEM 3.0 — *THE ETERNAL EMPIRE*
 
-*Roman Poker · Strategic Arsenals · The Arena Exchange · Empire*
+*Roman Poker · Imperial Circuit · Legendary Arsenal · Grand Exchange · Dynasty*
 
-A complete, original, fully local Roman-themed poker strategy game. Rise from **Peasant** to **Augustus** in fast four-player No-Limit Hold'em matches. Build an eight-slot **Arsenal** from 76 tactical abilities across 10 archetypes, and chase five named combos. Trade prediction contracts on fully simulated AI matches in the **Arena Exchange**. Buy villas, clubs, colosseums and a palace for your **Empire**, while ~120 rivals rise, fall, retire and make the news around you.
+Minnesota Mayhem is a fully local Roman poker empire game. You play fast four-player No-Limit Hold'em on a snowy Roman frontier and climb nine ranks from Peasant to Augustus.
 
-No accounts, no servers, no paid APIs, no ads, no real-money wagering. Fictional Dollars only.
+* **Imperial Circuit:** scheduled 16-player tournaments and real seasonal playoffs. The season ends in the Imperial Grand Championship, whose winner enters the Hall of Champions.
+* **Legendary Arsenal:** 122 tactical abilities with 26 legendary combinations, all built on a deterministic rule engine.
+* **Grand Exchange:** trade prediction contracts on AI matches and tournaments, using an LMSR market maker and real limit orders.
+* **Dynasty:** build an empire of venues, clubs and palaces, and sponsor rivals who rise, fall and retire around you.
 
-**What's new in 2.0:** see [`docs/CHANGELOG_2.0.md`](docs/CHANGELOG_2.0.md). It has the full before/after table, plus an honest list of what is completed, partial and not implemented.
+There are no accounts, servers, paid APIs, ads or real-money wagering. All Dollars are fictional.
 
-| Arena | Match | Exchange (live spectator) |
+* **What's new in 3.0:** [`docs/CHANGELOG_3.0.md`](docs/CHANGELOG_3.0.md) covers the V2 audit, the features, the investigations, the bugs fixed and an honest list of what is partial or missing.
+* **Rules reference:** [`docs/DESIGN.md`](docs/DESIGN.md).
+* **Measurements:** [`docs/BALANCE_REPORT.md`](docs/BALANCE_REPORT.md) (with confidence intervals) and [`docs/MARKET_CALIBRATION.md`](docs/MARKET_CALIBRATION.md).
+
+| Arena & Circuit | Table (expressions, animations) | Champion markets |
 |---|---|---|
-| ![arena](docs/screenshots/v2/02-arena.png) | ![match](docs/screenshots/v2/03-match.png) | ![exchange](docs/screenshots/v2/11-spectator.png) |
-| ![ceremony](docs/screenshots/v2/10-ceremony.png) | ![forge](docs/screenshots/v2/07-forge.png) | ![iPhone](docs/screenshots/v2/m-match.png) |
+| ![arena](docs/screenshots/v3/03-match.png) | ![playoffs](docs/screenshots/v3/17-playoffs.png) | ![champ](docs/screenshots/v3/11-champion-market.png) |
+| ![dynasty](docs/screenshots/v3/15-dynasty.png) | ![final replay](docs/screenshots/v3/09-watch-final.png) | ![iPhone](docs/screenshots/v3/m-match.png) |
 
-## Play loops
-* **PLAY → EARN → UPGRADE → CLIMB** — press PLAY for a ~3-minute ranked match, then win Dollars, upgrade in the Forge and earn your promotion trial.
-* **RESEARCH → TRADE → INVEST** — three contract books per AI match: Winner, First Elimination and Long Match.
-* **OWN → IMPROVE → PROFIT** — properties with upgrade levels, income and upkeep, and perks they unlock.
-* New players see only the essentials. Seven extra modes unlock as you play: Quick Clash, Daily Challenge, Draft Arena, Rival Challenge, Survival Gauntlet, Imperial Tournament and High Roller. An 8-step tutorial teaches by doing.
+## Play loops (one shared simulation and economy)
+* **PLAY → EARN → UPGRADE → CLIMB:** press PLAY for a ~3-minute ranked match.
+* **COMPETE → BUILD REPUTATION → QUALIFY → WIN CHAMPIONSHIPS:** circuit events, season standings, playoffs, the Hall.
+* **RESEARCH → TRADE → SETTLE → INVEST:** match and tournament markets, limit orders, Library research.
+* **ACQUIRE → DEVELOP → EARN → EXPAND:** properties, a Championship Venue and sponsorships.
 
 ## Quick start — Windows (one click after setup)
 1. Install **Node.js LTS** from https://nodejs.org (one time).
@@ -81,25 +88,24 @@ docs/                DESIGN.md (rules), BALANCE_REPORT.md, TEST_RESULTS.txt, E2E
 server.mjs           dependency-free local server;  *.bat / play.sh launchers
 ```
 
-## Verification
+## Verification (3.0)
 | Check | Command | Result |
 |---|---|---|
-| Unit & integration tests | `npm test` | **72/72 pass** — `docs/TEST_RESULTS.txt` |
-| 25-step browser journey (desktop, offline, iPhone 13) | `npm run build && npm run serve`, then `npm run test:e2e` | **27/27 checks** (25 steps + no runtime errors on desktop & mobile) — `docs/E2E_RESULTS.json`, screenshots in `docs/screenshots/v2/` |
-| Version 1 regression journey | `npm run test:e2e:v1` | V1 results kept in `docs/E2E_RESULTS_V1.json` |
-| Balance & AI benchmark | `npm run balance` | `docs/BALANCE_REPORT.md` (V1 baseline: `docs/BALANCE_REPORT_V1.md`) |
-| Ability coverage | `COVERAGE_MAIN=1 npx vite-node scripts/ability-coverage.ts` | trigger counts for all 76 abilities |
+| Unit & integration tests | `npm test` | **90/90 pass** (`docs/TEST_RESULTS.txt`) |
+| 25-step browser journey (V2 save import, circuit, playoffs, Exchange, Dynasty, offline, iPhone 13) | `npm run build && npm run serve`, then `npm run test:e2e` | `docs/E2E_RESULTS.json`, screenshots in `docs/screenshots/v3/` |
+| Previous journeys | `npm run test:e2e:v2`, `npm run test:e2e:v1` | archived results `docs/E2E_RESULTS_V2.json`, `docs/E2E_RESULTS_V1.json` |
+| Balance, AI benchmark (95% CIs), economy, performance | `npm run balance` | `docs/BALANCE_REPORT.md` (V2: `BALANCE_REPORT_V2.md`, V1: `BALANCE_REPORT_V1.md`) |
+| Forecast calibration study | `FORECAST_MAIN=1 npx vite-node scripts/forecast.ts` | `docs/MARKET_CALIBRATION.md` |
+| Ability trigger coverage | `COVERAGE_MAIN=1 npx vite-node scripts/ability-coverage.ts` | trigger counts for all 122 abilities |
 
-### Save migration
-A Version 1 save (schema 3) loads automatically. Before migrating, the untouched original is copied to `backup-v3` in IndexedDB. Ability IDs, properties, rival records, active markets, transactions, prestige and even an in-progress match all carry over. This is verified by a unit test and by a browser import of a frozen real V1 save (`tests/fixtures/v1-save.json`).
+### Save compatibility
+Version 1 (schema 3) and Version 2 (schema 4) saves load automatically and migrate step by step to schema 5. Before migrating, the untouched original is copied to `backup-v<N>` in IndexedDB. This is verified on frozen real saves (`tests/fixtures/v1-save.json`, `tests/fixtures/v2-save.json`), including a V2 save with a tournament heat in progress, and in the browser journey via the title-screen import.
 
 ## Known limitations
-* **Not a native app.** True offline iPhone play requires hosting `dist/` on HTTPS (any free static host); LAN play from the PC needs the PC running.
-* **Arsenal size:** 76 abilities, not 100+. Only abilities with distinct, coverage-tested mechanics were added.
-* **Exchange:** no tournament-champion or promotion markets, and no limit orders.
-* **Pre-match prices barely predict winners** (Brier ≈ uniform). In a 4-player poker knockout, ratings carry little signal. Live prices between hands, driven by public chip counts, are much more informative (see balance report §8).
-* **Simulated traders are funded by the LMSR subsidy** (~$110 per market, always within the theoretical bound). Momentum traders lose; value traders profit.
-* **AI:** strong heuristic + Monte-Carlo, not a solver. Its memory of you is public statistics only.
-* **Audio:** synthesized effects only, no music. Art is procedural and hand-authored pixel art.
-* **Balance figures come from AI-vs-AI simulation;** human play will shift them.
-* **Saves are per browser/device;** use Export/Import to move a career.
+See the full honest list in [`docs/CHANGELOG_3.0.md`](docs/CHANGELOG_3.0.md#partially-completed--not-implemented-honest-list). Highlights:
+* **Exchange markets:** finalist, placement, promotion, qualification and streak markets are **not implemented**. Limit orders work on match markets only.
+* **Pre-match prices barely predict winners.** This was measured, not assumed; live trading is where Exchange skill lies.
+* **Discipline** is strong at the top tier (~37–40%; fair share 25%), and that residual is documented.
+* **Art and audio:** animation is lightweight (CSS motion plus expression frames). The soundtrack is a small procedural synthesizer.
+* **iPhone:** layout and touch play are verified in an iPhone 13 viewport. Offline use on an iPhone needs HTTPS hosting of `dist/`, and this was not verified on a physical device.
+* **Saves** are per browser/device; use Export/Import to move a career.
